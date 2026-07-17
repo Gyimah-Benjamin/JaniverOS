@@ -47,6 +47,7 @@ sudo apt install nasm gcc binutils qemu-system-x86 mtools
 ```bash
 # Makefile
 make
+make disk'
 make run
 make clean
 
