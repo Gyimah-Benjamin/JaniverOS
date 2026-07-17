@@ -2,10 +2,12 @@
 #define FAT12_H
 
 #define SECTOR_SIZE 512
-#define ROOT_DIR_START 19
-#define ROOT_DIR_SECTORS 14
-#define FAT_START 1
-#define DATA_START 33
+#define ROOT_DIR_START 192
+#define ROOT_DIR_SIZE 32
+#define FAT_START 64
+#define FAT_SIZE 64
+#define CLUSTER_SIZE 4
+#define DATA_START 224
 void cat(char *filename);
 
 struct Dir{

@@ -11,6 +11,7 @@
 #define SCREEN_H 768
 #define MAXIMUM 728
 #define TASK_Y (SCREEN_H - TASK_H)
+#define VIB_BLUE 0xFF1C222E
 
 #define TERM_X 550
 #define TERM_Y 750
@@ -23,20 +24,26 @@ extern int track_y;
 extern int track_y1;
 extern int letter_track;
 void fill_screen(int x, int y, unsigned int color);
+void fill_screen1(int x, int y, unsigned int color);
 void draw_rect(int x, int y, int w, int h, int color);
 void draw_char(int x, int y, char al, int color, int color1);
 void string(int x, int y, char *str, int color, int color1);
 void init_screen();
 void boot_anime();
+void draw_wallpaper();
 void term_newline();
+void flush();
 void term_newline_xpromt();
 void term_newline_max();
 void terminal(int x, int y, int term_y, int term_x, int term_title, char *str);
 void terminal_max(int x, int y, int term_y, int term_x, int term_title, char *str );
 void terminal_close(int x, int y, int term_y, int term_x, int term_title, char *str);
+int fat_read(char *filename, char *output_buf);
+unsigned char rtc(unsigned char reg);
 void draw_desktop();
 void draw_task_bar();
 void cur_clear();
+void clear();
 void cur_clear_b();
 void delay(unsigned int time);
 void port_send(unsigned short port, unsigned short value);

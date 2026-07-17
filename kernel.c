@@ -29,7 +29,7 @@ int track_y = 120 + 5 + 10 + 10;
 int track_y1 = 120 + 5 + 10 + 10;
 int ad_ten = 0;
 int letter_track = 145;
-
+bool term_win_active = false;
 void init_history(){
 for(int i = 0; i < 10; i++){
 for(int j = 0; j < 255; j++){
@@ -56,7 +56,7 @@ return i;
 }
 
 void read_sector(int size, char* buffer){
-char* disk = (char*)0x9000;
+char* disk = (char*)0x20000;
 char* position = disk + (size * SECTOR_SIZE);
 for(int i = 0; i < SECTOR_SIZE; i++){
 buffer[i] = position[i];
@@ -139,6 +139,7 @@ my_free(sector);
 
 void cat(char *filename) {
     track_y1 = 120 + 10 + 5;
+    track_y = 120 + 10 + 5;
     track_x += 14;
     ad_ten += 14;
     char *sector = (char*)my_malloc(512);
@@ -191,7 +192,7 @@ void cat(char *filename) {
             if (match) {
                 int cluster = (level+i)->first_cluster;
                 int size = (level+i)->file_size;
-                int sector_num = DATA_START + (cluster - 2);
+                int sector_num = DATA_START + (cluster - 2)*CLUSTER_SIZE;
 
                 char *file_buf = (char*)my_malloc(size);
                 for(int k = 0; k < size; k++){
@@ -212,12 +213,14 @@ void cat(char *filename) {
                  if(track_y1 >= 845){
                   cur_clear();
                   track_y1 = 120 + 10 + 5;
+                  track_y = 120 + 10 + 5;
                   track_x += 14;
                   ad_ten += 14;
                   }
                 cur_clear();
                 draw_char(track_x, track_y1, file_buf[k], DESK_BG, TEXT_B);
                 track_y1 += 10;
+                track_y += 10;
                 }
                 else if(point_maxim.maxim_flag == 0){
                 draw_char(track_x, track_y1, file_buf[k], DESK_BG, TEXT_B);
@@ -240,6 +243,105 @@ void cat(char *filename) {
     string(track_x, track_y1, "File not found", DESK_BG, TEXT_B);
     }
 }
+
+/*
+int fat_read(char *filename, char *output_buf){
+    char *sector = (char*)my_malloc(512);
+    struct Dir *level;
+
+    char name[8] = {' ',' ',' ',' ',' ',' ',' ',' '};
+    char ext[3]  = {' ',' ',' '};
+
+    int i = 0;
+    int j = 0;
+    while(filename[i] && filename[i] != '.'){
+        name[j++] = filename[i++];
+    }
+    if(filename[i] == '.'){
+        i++;
+        j = 0;
+        while(filename[i]){
+            ext[j++] = filename[i++];
+        }
+    }
+
+    for(int s = 0; s < 14; s++){
+        ata_read(ROOT_DIR_START + s, sector);
+        level = (struct Dir*)sector;
+
+        for(int i = 0; i < SECTOR_SIZE / sizeof(struct Dir); i++){
+            if((level+i)->name[0] == 0x00){
+                my_free(sector);
+                return -1;
+            }
+            if((level+i)->name[0] == 0xE5) continue;
+            if((level+i)->attributes == 0x0F) continue;
+
+            int match = 1;
+            for(int j = 0; j < 8; j++){
+                if((level+i)->name[j] != name[j]){
+                    match = 0;
+                    break;
+                }
+            }
+            for(int j = 0; j < 3; j++){
+                if((level+i)->ext[j] != ext[j]){
+                    match = 0;
+                    break;
+                }
+            }
+
+            if(match){
+                int cluster = (level+i)->first_cluster;
+                int size = (level+i)->file_size;
+                int bytes_read = 0;
+
+                char *fat_buf = (char*)my_malloc(512);
+
+                while(cluster >= 2 && cluster < 0xFFF8 && bytes_read < size){
+                    int sector_num = DATA_START + (cluster - 2) * CLUSTER_SIZE;
+
+                    for(int s = 0; s < CLUSTER_SIZE && bytes_read < size; s++){
+                        int bytes_left = size - bytes_read;
+
+                        if(bytes_left >= SECTOR_SIZE){
+                            ata_read(sector_num + s, output_buf + bytes_read);
+                            bytes_read += SECTOR_SIZE;
+                        } else {
+                            char *temp = (char*)my_malloc(512);
+                            ata_read(sector_num + s, temp);
+                            for(int b = 0; b < bytes_left; b++){
+                                output_buf[bytes_read + b] = temp[b];
+                            }
+                            bytes_read += bytes_left;
+                            my_free(temp);
+                        }
+                    }
+
+                    // read next cluster from FAT
+// read next cluster from FAT16
+// read next cluster from FAT16
+unsigned short current_cluster = cluster;
+
+int fat_offset = current_cluster * 2;
+int fat_sector_num = FAT_START + (fat_offset / SECTOR_SIZE);
+int fat_entry_offset = fat_offset % SECTOR_SIZE;
+
+ata_read(fat_sector_num, fat_buf);
+
+cluster = *(unsigned short *)(fat_buf + fat_entry_offset);
+                }
+
+                my_free(fat_buf);
+                my_free(sector);
+                return size;
+            }
+        }
+    }
+    my_free(sector);
+    return -1;
+}
+*/
 
 void print_tim();
 
@@ -332,7 +434,7 @@ string(track_x, track_y1,"------>>>>>help, about, clear, version, echo, rm, time
 track_x += 14;
 ad_ten += 14;
 track_y1 = 5;
-string(track_x, track_y1,"---->>>>>date, reboot, history, ls, cat, write, uptime<<<<<-----",TASK_BG, TEXT_B);
+string(track_x, track_y1,"---->>>>>date, reboot, history, ls, cat, write, uptime, exit<<<<<-----",TASK_BG, TEXT_B);
 }
 }
 
@@ -353,7 +455,7 @@ string(track_x, track_y1, "Jan Operating System .", TASK_BG, TEXT_B);
 }
 
 else if(strcmp(cmd, "clear")){
-clear_screen();
+clear();
 }
 else if(strcmp(cmd, "version")){
 if(point_maxim.maxim_flag == 1){
@@ -415,9 +517,16 @@ else if(strcmp(cmd, "ls")){
 ls();
 }
 
+else if(strcmp(cmd, "exit")){
+terminal_close(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
+flush();
+term_win_active = false;
+point_maxim.maxim_flag = 0;
+}
+
 else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 't' && cmd[3] == ' '){
 cat(cmd + 4);
-newline();
+cur_clear();
 }
 
 else if(cmd[0] == 'w' && cmd[1] == 'r' && cmd[2] == 'i' && cmd[3] == 't' && cmd[4] == 'e'){
@@ -443,10 +552,20 @@ else if(cmd[0] == 'r' && cmd[1] == 'm' && cmd[2] == ' '){
 rm(cmd + 3);
 newline();
 }
-//else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 'l' && cmd[3] == 'c' && cmd[4] == ' '){
-//calc(cmd + 5,strlen(cmd + 5));
-//newline();
-//}
+/*
+else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 'l' && cmd[3] == 'c' && cmd[4] == ' '){
+ad_ten += 14;
+track_x += 14;
+track_y1 = 120 + 5 + 10 + 10;
+int k = 5;
+if(cmd[k] == '\0'){
+string(track_x, track_y1, "Guide:", RED, TEXT_B);
+}
+else{
+calc(cmd + 5,strlen(cmd + 5));
+}
+}
+*/
 
 else{
 ad_ten += 14;
@@ -457,41 +576,26 @@ string(track_x, track_y1, "Command does not exist yet.", RED, TEXT_B);
 }
 
 int find_cluster(){
-char *sector = (char*)my_malloc(512);
-read_sector(FAT_START, sector);
-for(int i = 2; i < 29; i++){
-int offset = i + (i/2);
-unsigned short val;
-
-if(i % 2 == 0){
-val = sector[offset] | ((sector[offset + 1]) & 0x0F) << 8;
-}
-
-else{
-val = (sector[offset]) >> 4 | (sector[offset + 1]) << 4;
-}
-
-if(val == 0x000){
-my_free(sector);
-return i;
-}
-}
-my_free(sector);
-return -1;
+    char *sector = (char*)my_malloc(512);
+    for(int s = 0; s < FAT_SIZE; s++){
+        ata_read(FAT_START + s, sector);
+        unsigned short *fat = (unsigned short*)sector;
+        for(int i = 0; i < 256; i++){
+            int clust = s * 256 + i;
+            if(clust < 2) continue;
+            if(fat[i] == 0x0000){
+                my_free(sector);
+                return clust;
+            }
+        }
+    }
+    my_free(sector);
+    return -1;
 }
 
 void clus_taken(char *fat, int clust){
-int offset = clust + (clust / 2);
-if(clust % 2 == 0){
-fat[offset] = 0xFF;
-fat[offset + 1] = (fat[offset + 1] & 0xF0) | 0x0F;
-}
-
-else{
-fat[offset] = (fat[offset] & 0x0F) | 0xF0;
-fat[offset + 1] = 0xFF;
-}
-
+    unsigned short *fat16 = (unsigned short*)fat;
+    fat16[clust % 256] = 0xFFFF;
 }
 
 void write_file(char *filename, char *data, int size){
@@ -605,7 +709,7 @@ dst[i] = 0;
 for(int j = 0; j < size; j++){
 dst[j] = data[j];
 }
-ata_write(DATA_START + cluster -2, dst);
+ata_write(DATA_START + (cluster -2)*CLUSTER_SIZE, dst);
 my_free(dst);
 my_free(sector);
 cur_clear();
@@ -691,17 +795,8 @@ char *buff = (char*)my_malloc(512);
 ata_read(FAT_START, buff);
 
 int cluster = (level + i) -> first_cluster;
-int cluster_i = cluster + (cluster/2);
-
-if(cluster%2 == 0){
-buff[cluster_i] = 0x00;
-buff[cluster_i + 1] = (buff[cluster_i + 1] & 0xF0);
-}
-
-else{
-buff[cluster_i] = (buff[cluster_i] & 0x0F);
-buff[cluster_i + 1] = 0x00;
-}
+unsigned short *fat16 = (unsigned short*)buff;
+fat16[cluster] = 0x0000;  // mark as free
 
 ata_write(FAT_START, buff);
 my_free(buff);
@@ -722,14 +817,10 @@ my_free(sector);
 return;
 }
 
-unsigned char rtc(unsigned char reg){
-__asm__("out %%al, %%dx" :: "a"(reg), "d"(0x70));
 
-unsigned char val;
-__asm__("in %%dx, %%al" : "=a"(val) : "d"(0x71));
 
-return val;
-}
+
+
 
 
 void print_tim(){
@@ -868,6 +959,7 @@ void kernel_main() {
     init_history();
     init_screen();
     boot_anime();
+//    draw_wallpaper();
     //set_page_table();
     //paging();
 
@@ -891,8 +983,9 @@ else{
 cur_clear();
 }
 }
+draw_task_bar();
 if(last_key){
-if(point_maxim.maxim_flag == 1 && last_key == '\b' && letter_track > 145){
+if(point_maxim.maxim_flag == 1 && last_key == '\b' && letter_track > 145 && term_win_active == true){
 if(track_y <= 145){
 cur_clear();
 track_x -= 14;
@@ -912,7 +1005,7 @@ letter_track -= 10;
 }
 
 
-else if(point_maxim.maxim_flag == 0 && last_key == '\b' && letter_track > 25){
+else if(point_maxim.maxim_flag == 0 && last_key == '\b' && letter_track > 25 && term_win_active == true){
 position--;
 track_y -= 10;
 draw_char(track_x, track_y, ' ', TEXT_W, TEXT_B);
@@ -991,11 +1084,11 @@ arrow_count = 0;
 }
 cur_clear();
 shell(buffer);
-if(point_maxim.maxim_flag == 1){
+if(point_maxim.maxim_flag == 1 && term_win_active == true){
 term_newline();
 cur();
 }
-else if(point_maxim.maxim_flag == 0){
+else if(point_maxim.maxim_flag == 0 && term_win_active == true){
 term_newline_max();
 }
 position = 0;
@@ -1003,16 +1096,17 @@ position = 0;
 last_key = 0;
 }
 
-else if(last_key == 'M'){
+else if(last_key == 'Y'){
 if(point_maxim.maxim_flag == 0){
-draw_desktop();
 terminal(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
 point_maxim.maxim_flag = 1;
+term_win_active = true;
 ad_ten = 0;
 track_x = 65;
 track_y = 120 + 5 + 10 + 10;
 letter_track = 145;
 cur();
+
 }
 else if(point_maxim.maxim_flag == 1){
 
@@ -1028,17 +1122,19 @@ letter_track = 25;
 else if(last_key == 'X'){
 if(point_maxim.maxim_flag == 0){
 terminal_close(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
+flush();
 point_maxim.maxim_flag = 1;
 }
 
 else if(point_maxim.maxim_flag == 1){
 terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
 point_maxim.maxim_flag = 0;
+term_win_active = false;
 }
 }
 
 else if(last_key != 0){
-if(point_maxim.maxim_flag == 1){
+if(point_maxim.maxim_flag == 1 && term_win_active == true){
 if(track_y >= 845){
 cur_clear();
 term_newline_xpromt();
@@ -1053,7 +1149,7 @@ position++;
 letter_track += 10;
 }
 
-else if(point_maxim.maxim_flag == 0){
+else if(point_maxim.maxim_flag == 0 && term_win_active == true){
 if(track_y >= 1024){
 term_newline_max();
 position = 0;
