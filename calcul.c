@@ -1,59 +1,136 @@
 #include "win.h"
-#include "calcul.h"
-
-void add(char *ptr){
-int real_val;
-int real_val1;
-int i;
-for(i = 0; ptr[i] != '\0'; i++){
-if(ptr[i] == '+'){
-i++;
-int val1 = ptr[i];
-i++;
-int val2 = ptr[i];
-i++;
-int real_val = (val1*10)+val2;
-}
-int val3 = ptr[i];
-i++;
-int val4 = ptr[i];
-i++;
-int real_val1 = (val3*10)+val4;
-}
-
-int total = real_val + real_val1;
-char tot[2];
-tot[0] = total;
-tot[1] = '\0';
-string(track_x, track_y1, tot, DESK_BG, TEXT_B);
-}
 
 void calc(char *content, int size){
-int opera = 0;
-int result = 0;
-int result_1 = 0;
-int i = 0;
-char temp_num[6];
+    int x = 0;
+    char num_1[5];
+    char num_2[5];
+    int num1_count = 0;
+    int num2_count = 0;
+    int total = 0;
+    int total_1 = 0;
+    int final_val = 0;
+    bool cyc = false;
+    char opera = 0;
+    int dig[4];
+    int dig_count = 0;
+    for (x = 0; content[x] != '\0'; x++) {
+     if(content[x] != '0' && content[x] != '1' && content[x] != '2' && content[x] != '3' && content[x] != '4' && content[x] != '5' && content[x] != '6' &&
+        content[x] != '7' && content[x] != '8' && content[x] != '9' && content[x] != '+' && content[x] != '-' && content[x] != '/' && content[x] != '*'){
+         continue;
 
-while(i < size){
-if(content[i] == '*' || content[i] == '/' || content[i] == '+' || content[i] == '-'){
-temp_num[i] = content[i];
-
-i++;
-for(i = i; content[i] != '\0'; i++){
-temp_num[i] = content[i] - '0';
-}
-temp_num[i] = '\0';
-for(i = 0; temp_num[i] != '\0'; i++){
-if(temp_num[i] == '+'){
-add(temp_num);
-}
-}
-return;
-}
-for(i = 0; content[i] != '*' || content[i] != '/' || content[i] != '+' || content[i] != '-'; i++){
-temp_num[i] = content[i] - '0';
 }
 
+        if(content[x] == '+' || content[x] == '/' ||
+                 content[x] == '*' || content[x] == '-') {
+            opera = content[x];
+            cyc = true;
+        }
+
+        else if(!cyc) {
+            num_1[num1_count++] = content[x];
+        }
+
+      else {
+            num_2[num2_count++] = content[x];
+
+        }
+
+    }
+    num_1[num1_count] = '\0';
+    num_2[num2_count] = '\0';
+    if(num1_count == 0 || num2_count == 0){
+     string(track_x, track_y1, "Invalid Operation", RED, TEXT_B);
+    return;
+}
+
+    if (opera == '+') {
+       for(int i = 0; num_1[i] != '\0'; i++){
+        total = (total*10) + (num_1[i] - '0');
+        }
+
+       for(int n = 0; num_2[n] != '\0'; n++){
+        total_1 = (total_1*10) + (num_2[n] - '0');
+        }
+
+    final_val = total + total_1;
+
+    if(final_val == 0){
+    dig[dig_count++] = 0;
+}
+
+while(final_val > 0){
+dig[dig_count++] = final_val%10;
+final_val = final_val/10;
+}
+    }
+
+    else if (opera == '/') {
+        for(int i = 0; num_1[i] != '\0'; i++){
+        total = (total*10) + (num_1[i] - '0');
+        }
+
+       for(int n = 0; num_2[n] != '\0'; n++){
+        total_1 = (total_1*10) + (num_2[n] - '0');
+        }
+
+    final_val = total / total_1;
+
+    if(final_val == 0){
+    dig[dig_count++] = 0;
+}
+
+while(final_val > 0){
+dig[dig_count++] = final_val%10;
+final_val = final_val/10;
+}
+    }
+
+
+    else if (opera == '*') {
+        for(int i = 0; num_1[i] != '\0'; i++){
+        total = (total*10) + (num_1[i] - '0');
+        }
+
+       for(int n = 0; num_2[n] != '\0'; n++){
+        total_1 = (total_1*10) + (num_2[n] - '0');
+        }
+
+    final_val = total * total_1;
+
+    if(final_val == 0){
+    dig[dig_count++] = 0;
+}
+
+while(final_val > 0){
+dig[dig_count++] = final_val%10;
+final_val = final_val/10;
+}
+    }
+
+    else if (opera == '-') {
+        for(int i = 0; num_1[i] != '\0'; i++){
+        total = (total*10) + (num_1[i] - '0');
+        }
+
+       for(int n = 0; num_2[n] != '\0'; n++){
+        total_1 = (total_1*10) + (num_2[n] - '0');
+        }
+
+    final_val = total - total_1;
+
+    if(final_val == 0){
+    dig[dig_count++] = 0;
+}
+
+while(final_val > 0){
+dig[dig_count++] = final_val%10;
+final_val = final_val/10;
+}
+    }
+
+
+    for(int y = dig_count - 1; y >= 0; y--){
+    draw_char(track_x, track_y1, dig[y] + '0', TEXT_W, TEXT_B);
+    track_y1 += 10;
 }
 }

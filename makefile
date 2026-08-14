@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -nostdlib
 
-OBJS = kernel.o vga.o keyboard.o ata.o idt.o inter.o timer.o gdt.o win.o calcul.o
+OBJS = kernel.o vga.o keyboard.o ata.o idt.o inter.o timer.o gdt.o win.o calcul.o memory.o
 
 all: build
 

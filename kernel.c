@@ -8,7 +8,7 @@
 #include "gdt.h"
 #include "font.h"
 #include "win.h"
-//#include "calcul.h"
+#include "calcul.h"
 #define GREEN 0x02
 #define NO 0x0F
 #define GREY 0x07
@@ -29,6 +29,7 @@ int track_y = 120 + 5 + 10 + 10;
 int track_y1 = 120 + 5 + 10 + 10;
 int ad_ten = 0;
 int letter_track = 145;
+bool is_typing = false;
 bool term_win_active = false;
 void init_history(){
 for(int i = 0; i < 10; i++){
@@ -360,23 +361,23 @@ ad_ten += 14;
 track_y1 = 120 + 5 + 10;
 string(track_x, track_y1, "Up-time:", TASK_BG, TEXT_B);
 
-draw_char(track_x, track_y1, '0' + hours/10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + hours/10, TASK_BG, TEXT_B);
 track_y1 += 10;
-draw_char(track_x, track_y1, '0' + hours%10, TASK_BG, TEXT_B);
-track_y1 += 10;
-
-string(track_x, track_y1, ":", TASK_BG, TEXT_B);
-
-draw_char(track_x, track_y1, '0' + minutes/10, TASK_BG, TEXT_B);
-track_y1 += 10;
-draw_char(track_x, track_y1, '0' + minutes%10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + hours%10, TASK_BG, TEXT_B);
 track_y1 += 10;
 
 string(track_x, track_y1, ":", TASK_BG, TEXT_B);
 
-draw_char(track_x, track_y1, '0' + seconds/10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + minutes/10, TASK_BG, TEXT_B);
 track_y1 += 10;
-draw_char(track_x, track_y1, '0' + seconds%10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + minutes%10, TASK_BG, TEXT_B);
+track_y1 += 10;
+
+string(track_x, track_y1, ":", TASK_BG, TEXT_B);
+
+term_input(track_x, track_y1, '0' + seconds/10, TASK_BG, TEXT_B);
+track_y1 += 10;
+term_input(track_x, track_y1, '0' + seconds%10, TASK_BG, TEXT_B);
 }
 else if(point_maxim.maxim_flag == 0){
 track_x += 14;
@@ -384,43 +385,62 @@ ad_ten += 14;
 track_y1 = 5;
 string(track_x, track_y1, "Up-time:", TASK_BG, TEXT_B);
 
-draw_char(track_x, track_y1, '0' + hours/10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + hours/10, TASK_BG, TEXT_B);
 track_y1 += 10;
-draw_char(track_x, track_y1, '0' + hours%10, TASK_BG, TEXT_B);
-track_y1 += 10;
-
-string(track_x, track_y1, ":", TASK_BG, TEXT_B);
-
-draw_char(track_x, track_y1, '0' + minutes/10, TASK_BG, TEXT_B);
-track_y1 += 10;
-draw_char(track_x, track_y1, '0' + minutes%10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + hours%10, TASK_BG, TEXT_B);
 track_y1 += 10;
 
 string(track_x, track_y1, ":", TASK_BG, TEXT_B);
 
-draw_char(track_x, track_y1, '0' + seconds/10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + minutes/10, TASK_BG, TEXT_B);
 track_y1 += 10;
-draw_char(track_x, track_y1, '0' + seconds%10, TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '0' + minutes%10, TASK_BG, TEXT_B);
+track_y1 += 10;
+
+string(track_x, track_y1, ":", TASK_BG, TEXT_B);
+
+term_input(track_x, track_y1, '0' + seconds/10, TASK_BG, TEXT_B);
+track_y1 += 10;
+term_input(track_x, track_y1, '0' + seconds%10, TASK_BG, TEXT_B);
 }
 }
 void shell(char* cmd){
 if(cmd[0] == 0){
 return;
 }
+
+
 if(strcmp(cmd, "help")){
 if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
+if(term_win[0].check == true && term_win[1].check == false){
 track_y1 = 120 + 5 + 10;
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
 string(track_x, track_y1, "--------------------------Available commands---------------------", TASK_BG, TEXT_B);
 track_x += 14;
 ad_ten += 14;
+
+if(term_win[0].check == true && term_win[1].check == false){
 track_y1 = 120 + 5 + 10;
-string(track_x, track_y1,"------>>>>>help, about, clear, version, echo, rm, time<<<<<------", TASK_BG, TEXT_B);
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
+string(track_x, track_y1,"------>>>>>help, about, clear, version, echo, rm, time, calc<<<<<------", TASK_BG, TEXT_B);
 track_x += 14;
 ad_ten += 14;
+
+if(term_win[0].check == true && term_win[1].check == false){
 track_y1 = 120 + 5 + 10;
-string(track_x, track_y1,"---->>>>>date, reboot, history, ls, cat, write, uptime<<<<<-----",TASK_BG, TEXT_B);
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
+string(track_x, track_y1,"---->>>>>date, reboot, history, ls, cat, write, uptime, exit<<<<<-----",TASK_BG, TEXT_B);
 }
 else if(point_maxim.maxim_flag == 0){
 track_x += 14;
@@ -442,7 +462,13 @@ else if(strcmp(cmd, "about")){
 if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
+
+if(term_win[0].check == true && term_win[1].check == false){
 track_y1 = 120 + 5 + 10;
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
 string(track_x, track_y1, "Jan Operating System .", TASK_BG, TEXT_B);
 }
 
@@ -475,7 +501,7 @@ string(track_x, track_y1, "Version 1.0x", TASK_BG, TEXT_B);
 }
 
 else if(cmd[0] == 'e' && cmd[1] == 'c' && cmd[2] == 'h' && cmd[3] == 'o' && cmd[4] == ' '){
-printY(cmd + 5);
+string(track_x, track_y1, cmd + 5, TASK_BG, TEXT_B);
 newline();
 }
 
@@ -488,6 +514,7 @@ date();
 }
 
 else if(strcmp(cmd, "reboot")){
+is_typing = false;
 reeb();
 term_newline();
 }
@@ -518,8 +545,11 @@ ls();
 }
 
 else if(strcmp(cmd, "exit")){
-terminal_close(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
-flush();
+task_active = false;
+draw_task_bar();
+//terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
+terminal_close();
+icon(90, 120);
 term_win_active = false;
 point_maxim.maxim_flag = 0;
 }
@@ -552,7 +582,7 @@ else if(cmd[0] == 'r' && cmd[1] == 'm' && cmd[2] == ' '){
 rm(cmd + 3);
 newline();
 }
-/*
+
 else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 'l' && cmd[3] == 'c' && cmd[4] == ' '){
 ad_ten += 14;
 track_x += 14;
@@ -565,7 +595,7 @@ else{
 calc(cmd + 5,strlen(cmd + 5));
 }
 }
-*/
+
 
 else{
 ad_ten += 14;
@@ -985,7 +1015,9 @@ cur_clear();
 }
 draw_task_bar();
 if(last_key){
-if(point_maxim.maxim_flag == 1 && last_key == '\b' && letter_track > 145 && term_win_active == true){
+if(point_maxim.maxim_flag == 1 && last_key == '\b' && term_win_active == true){
+if(term_win[0].check == true && term_win[1].check == false){
+if(letter_track > 145){
 if(track_y <= 145){
 cur_clear();
 track_x -= 14;
@@ -997,33 +1029,56 @@ position--;
 track_y -= 10;
 track_y1 -= 10;
 cur_clear_b();
-draw_char(track_x, track_y, ' ', TEXT_W, TEXT_B);
+term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
 buffer[position] = 0;
 cur();
 last_key = 0;
 letter_track -= 10;
+}
+}
+
+else if(term_win[0].check == true && term_win[1].check == true){
+if(letter_track > term_win[1].term_y_start + 25){
+if(track_y <= term_win[1].term_y_start + 25){
+cur_clear();
+track_x -= 14;
+ad_ten -= 14;
+track_y = 845;
+cur_clear();
+}
+position--;
+track_y -= 10;
+track_y1 -= 10;
+cur_clear_b();
+term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
+buffer[position] = 0;
+cur();
+last_key = 0;
+letter_track -= 10;
+}
+}
 }
 
 
 else if(point_maxim.maxim_flag == 0 && last_key == '\b' && letter_track > 25 && term_win_active == true){
 position--;
 track_y -= 10;
-draw_char(track_x, track_y, ' ', TEXT_W, TEXT_B);
+term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
 cur();
 last_key = 0;
 letter_track -= 10;
 }
 
-else if(last_key == DOWN){
+else if(last_key == DOWN && term_win_active == true){
 if(arrow_count > 0){
 arrow_count--;
 }
 
-while(cursor > pro){
-cursor--;
-char *video = (char*)VIDEO_MEMORY;
-video[cursor * 2] = ' ';
-video[cursor * 2 + 1] = NO;
+while(track_y > 145){
+track_y -= 10;
+letter_track -= 10;
+term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
+cur_clear_b();
 }
 if(arrow_count == 0){
 buffer[0] = 0;
@@ -1035,24 +1090,27 @@ int i;
 int browse = (history_count - arrow_count) % 10;
 for(i = 0; history_store[browse][i] != 0; i++){
 buffer[i] = history_store[browse][i];
-print_char(buffer[i], VIOLET);
+term_input(track_x, track_y, buffer[i], TEXT_W, TEXT_B);
+cur_clear();
+track_y += 10;
+letter_track += 10;
 }
 position = i;
 }
 last_key = 0;
 }
 
-else if(last_key == UP){
+else if(last_key == UP &&  term_win_active == true){
     if(arrow_count < 10 && arrow_count < history_count){
         arrow_count++;
     }
 
     // clear current line
-    while(cursor > pro){
-        cursor--;
-        char *video = (char*)VIDEO_MEMORY;
-        video[cursor * 2] = ' ';
-        video[cursor * 2 + 1] = NO;
+    while(track_y > 145){
+        track_y -= 10;
+        letter_track -= 10;
+        term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
+        cur_clear_b();
     }
 
     // get the right slot
@@ -1062,8 +1120,11 @@ else if(last_key == UP){
     int i = 0;
     while(history_store[browse][i] != 0){
         buffer[i] = history_store[browse][i];
-        print_char(buffer[i], VIOLET);
+        term_input(track_x, track_y, buffer[i], TEXT_W, TEXT_B);
+        cur_clear();
         i++;
+        track_y += 10;
+        letter_track += 10;
     }
     position = i;
     last_key = 0;
@@ -1097,8 +1158,8 @@ last_key = 0;
 }
 
 else if(last_key == 'Y'){
-if(point_maxim.maxim_flag == 0){
-terminal(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
+if(term_win[0].check == false){
+init_term_N(30, 120, 750, 550, 32, "Jan Terminal");
 point_maxim.maxim_flag = 1;
 term_win_active = true;
 ad_ten = 0;
@@ -1106,10 +1167,19 @@ track_x = 65;
 track_y = 120 + 5 + 10 + 10;
 letter_track = 145;
 cur();
+}
+else if(term_win[0].check == true && term_win[1].check == false){
+init_term_N(140, 250, 740, 558, 30, "Jan Terminal");
+point_maxim.maxim_flag = 1;
+term_win_active = true;
+ad_ten = 0;
+//letter_track = 145;
+cur();
+}
 
 }
-else if(point_maxim.maxim_flag == 1){
 
+else if(last_key == 'P'){
 terminal_max(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
 point_maxim.maxim_flag = 0;
 ad_ten = 0;
@@ -1117,19 +1187,29 @@ track_x = 35;
 track_y = 25;
 letter_track = 25;
 }
-}
+
 
 else if(last_key == 'X'){
 if(point_maxim.maxim_flag == 0){
-terminal_close(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
+//terminal_close(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
+terminal_close();
 flush();
 point_maxim.maxim_flag = 1;
 }
 
 else if(point_maxim.maxim_flag == 1){
-terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
+if(term_win[0].check == true){
+task_active = false;
+draw_task_bar();
+//terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
+terminal_close();
+j_free(term_win[0].buffer);
+term_win[0].check = false;
+icon(90, 120);
 point_maxim.maxim_flag = 0;
 term_win_active = false;
+}
+
 }
 }
 
@@ -1141,7 +1221,7 @@ term_newline_xpromt();
 }
 buffer[position] = last_key;
 cur_clear();
-draw_char(track_x,track_y, last_key,TEXT_W,TEXT_B);
+term_input(track_x,track_y, last_key,TEXT_W,TEXT_B);
 track_y += 10;
 track_y1 += 10;
 cur();

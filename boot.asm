@@ -80,7 +80,7 @@ continue_boot:
 dap:
     db 0x10
     db 0
-    dw 60
+    dw 80
     dw 0x0000
     dw 0x0800
     dq 1
