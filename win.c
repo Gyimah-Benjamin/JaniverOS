@@ -140,11 +140,11 @@ else if(term_win[0].check == true && term_win[1].check == true && is_typing == t
     term_win[1].buffer[offset + 2] = (color >> 16) & 0xFF;
 }
 
-/*else{
+else{
     fb[offset_1]     = color & 0xFF;
     fb[offset_1 + 1] = (color >> 8) & 0xFF;
     fb[offset_1 + 2] = (color >> 16) & 0xFF;
-}*/
+}
 
 }
 
@@ -237,21 +237,21 @@ main_offset = (x*3072) + (y*3);
 }
 */
 
-void draw_log1(int x, int y, unsigned int color){
+/*void draw_log1(int x, int y, unsigned int color){
     int offset = (x * 3072) + (y * 3);
     back_buffer[offset]     = color & 0xFF;
     back_buffer[offset + 1] = (color >> 8) & 0xFF;
     back_buffer[offset + 2] = (color >> 16) & 0xFF;
 }
-
-/*void draw_log(int x, int y, unsigned int  color){
+*/
+void draw_log(int x, int y, unsigned int  color){
     unsigned char *fb = (unsigned char*)screen;
     int offset = (x * 3072) + (y * 3);
     fb[offset]     = color & 0xFF;
     fb[offset + 1] = (color >> 8) & 0xFF;
     fb[offset + 2] = (color >> 16) & 0xFF;
 }
-*/
+
 void icon(int xth, int yth){
 int index = 0;
 
@@ -263,8 +263,8 @@ index += 1;
 if(color == 0x000000){
 continue;
 }
-//draw_log((xth+y), (yth+x), color);
-draw_log1((xth+y), (yth+x), color);
+draw_log((xth+y), (yth+x), color);
+//draw_log1((xth+y), (yth+x), color);
 }
 }
 }
@@ -465,7 +465,12 @@ letter_track = term_win[1].term_y_start + 25;
 void term_newline_xpromt(){
 ad_ten += 14;
 track_x += 14;
+if(term_win[0].check == true && term_win[1].check == false){
 track_y = 145;
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y = term_win[1].term_y_start+25;
+}
 track_y1 += 10;
 }
 
@@ -579,7 +584,7 @@ draw_rect(x, y, term_y, term_x, TEXT_B);
 draw_rect(x, y, term_y, term_title, GREYY);
 
 for(int i = 0; str[i] != 0; i++){
-draw_char((term_title) /2, (term_y) /2 + incre, str[i], TEXT_W, GREYY);
+draw_char((term_title/2)-5, ((term_y/2)-30) + incre, str[i], TEXT_W, GREYY);
 incre += 10;
 }
 
@@ -600,7 +605,7 @@ else if(term_win[0].check == true && term_win[1].check == true){
 string(x + 35, y + 5, "~", TASK_BG, TEXT_B);
 string(x + 33, y + 5 + 10, "$", TASK_BG, TEXT_B);
 }
-//icon(737, 110);
+icon(737, 110);
 }
 
 
@@ -621,14 +626,17 @@ for(int y = 0; y < 3; y++){
 }
 }
 
-//void terminal_close(int x, int y, int term_y, int term_x, int term_title, char *str)
 void terminal_close(){
-if(term_win[0].check == true){
+/*if(term_win[0].check == true && term_win[1].check == false){
 grad_color(back_buffer, 728, 1024);
 flush();
-term_win[0].check = false;
-term_win[1].check = false;
 }
+else if(term_win[0].check == true && term_win[1].check == true){
+grad_color(back_buffer, 728, 1024);
+flush();
+term_win[1].check = false;
+draw_win(term_win[0].total_bytes, term_win[0].term_x_start, term_win[0].term_y_start, term_win[0].term_y);
+}*/
 }
 
 
@@ -655,42 +663,41 @@ for(int j = 0; j < 1024*768*3; j++){
 back_buffer[j] = 0x00000000;
 }
 //draw_rect(0, 0, SCREEN_W, SCREEN_H, 0x00000000);
-int lx = SCREEN_W / 2 - 100;
+int lx = SCREEN_W / 2 - 120;
 int ly = SCREEN_H / 2 - 40;
 
-char *name = "JanOS";
+char *name = "JaniverOS";
 
 for(int i = 0; name[i] != 0; i++){
 for(int j = 0; j < 1; j++){
 draw_cursor(ly, lx, 1);
-flush();
-delay(52200500);
+
+delay(92200500);
 draw_cursor(ly, lx, 0);
-flush();
-delay(52200500);
+
+delay(92200500);
 }
 
 draw_char_l(ly, lx + 8, name[i], 0x00444444, 0x00000000, 0);
-flush();
-delay(9500000);
+
+delay(29500000);
 draw_char_l(ly, lx + 4, name[i], 0x00888888, 0x00000000, 1);
-flush();
-delay(9500000);
+
+delay(11000000);
 draw_char_l(ly, lx, name[i], TEXT_W, 0x00000000, 2);
-flush();
+delay(110500000);
 lx += 10 * 2;
 
 }
 
 for(int i = 0; i < 6; i++){
 draw_cursor(ly, lx, i%2);
-flush();
-delay(56500000);
+
+delay(110500000);
 }
 
 draw_cursor(ly, lx, 0);
 flush();
-delay(20500000);
 grad_color(back_buffer, 728, 1024);
 draw_task_bar();
 
@@ -731,8 +738,8 @@ term_input(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
 }
 else{
 grad_task(back_buffer, TASK_Y, 0, TASK_H, SCREEN_W);
-icon(90, 120);
 flush();
+icon(90, 40);
 unsigned char hours = rtc(0x04);
 unsigned char minutes = rtc(0x02);
 unsigned char seconds = rtc(0x00);

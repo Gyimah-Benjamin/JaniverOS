@@ -84,7 +84,13 @@ continue;
 }
 
 if(point_maxim.maxim_flag == 1){
-track_y1 = 120 + 5 + 10;
+if(term_win[0].check == true && term_win[1].check == false){
+    track_y1 = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+    }
 track_x += 14;
 ad_ten += 14;
 for(int j = 0; j < 8; j++){
@@ -92,18 +98,18 @@ if((level + i) -> name[j] == ' '){
 break;
 }
 track_y1 += 10;
-draw_char(track_x, track_y1, (level + i) -> name[j], TASK_BG, TEXT_B);
+term_input(track_x, track_y1, (level + i) -> name[j], TASK_BG, TEXT_B);
 }
 
 if((level + i) -> ext[0] != ' '){
 track_y1 += 10;
-draw_char(track_x, track_y1, '.', TASK_BG, TEXT_B);
+term_input(track_x, track_y1, '.', TASK_BG, TEXT_B);
 for(int j = 0; j < 3; j++){
 if((level + i) -> ext[j] == ' '){
 break;
 }
 track_y1 += 10;
-draw_char(track_x, track_y1, (level + i) -> ext[j], TASK_BG, TEXT_B);
+term_input(track_x, track_y1, (level + i) -> ext[j], TASK_BG, TEXT_B);
 }
 }
 }
@@ -139,8 +145,15 @@ my_free(sector);
 }
 
 void cat(char *filename) {
+    if(term_win[0].check == true && term_win[1].check == false){
     track_y1 = 120 + 10 + 5;
     track_y = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+     track_y = term_win[1].term_y_start+25;
+    }
     track_x += 14;
     ad_ten += 14;
     char *sector = (char*)my_malloc(512);
@@ -211,20 +224,27 @@ void cat(char *filename) {
                 continue;
                 }
                 if(point_maxim.maxim_flag == 1){
-                 if(track_y1 >= 845){
+                 if(track_y1 >= 845 && term_win[0].check == true && term_win[1].check == false){
                   cur_clear();
                   track_y1 = 120 + 10 + 5;
                   track_y = 120 + 10 + 5;
                   track_x += 14;
                   ad_ten += 14;
                   }
+                else if(track_y1 >= (term_win[1].term_y+term_win[1].term_y_start)-10 && term_win[0].check == true && term_win[1].check == true){
+                 cur_clear();
+                  track_y1 = term_win[1].term_y_start+25;
+                  track_y = term_win[1].term_y_start+25;
+                  track_x += 14;
+                  ad_ten += 14;
+                }
                 cur_clear();
-                draw_char(track_x, track_y1, file_buf[k], DESK_BG, TEXT_B);
+                term_input(track_x, track_y1, file_buf[k], DESK_BG, TEXT_B);
                 track_y1 += 10;
                 track_y += 10;
                 }
                 else if(point_maxim.maxim_flag == 0){
-                draw_char(track_x, track_y1, file_buf[k], DESK_BG, TEXT_B);
+                term_input(track_x, track_y1, file_buf[k], DESK_BG, TEXT_B);
                 track_y1 += 10;
                 }
                 }
@@ -487,8 +507,13 @@ else if(strcmp(cmd, "version")){
 if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
-track_y1 = 120 + 5 + 10;
 
+if(term_win[0].check == true && term_win[1].check == false){
+track_y1 = 120 + 5 + 10;
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
 string(track_x, track_y1, "Version 1.0x", TASK_BG, TEXT_B);
 }
 
@@ -501,8 +526,16 @@ string(track_x, track_y1, "Version 1.0x", TASK_BG, TEXT_B);
 }
 
 else if(cmd[0] == 'e' && cmd[1] == 'c' && cmd[2] == 'h' && cmd[3] == 'o' && cmd[4] == ' '){
+track_x += 14;
+ad_ten += 14;
+
+if(term_win[0].check == true && term_win[1].check == false){
+track_y1 = 120 + 5 + 10;
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
 string(track_x, track_y1, cmd + 5, TASK_BG, TEXT_B);
-newline();
 }
 
 else if(strcmp(cmd, "time")){
@@ -584,9 +617,16 @@ newline();
 }
 
 else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 'l' && cmd[3] == 'c' && cmd[4] == ' '){
-ad_ten += 14;
 track_x += 14;
-track_y1 = 120 + 5 + 10 + 10;
+ad_ten += 14;
+
+if(term_win[0].check == true && term_win[1].check == false){
+track_y1 = 120 + 5 + 10;
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
+
 int k = 5;
 if(cmd[k] == '\0'){
 string(track_x, track_y1, "Guide:", RED, TEXT_B);
@@ -598,9 +638,15 @@ calc(cmd + 5,strlen(cmd + 5));
 
 
 else{
-ad_ten += 14;
 track_x += 14;
+ad_ten += 14;
+
+if(term_win[0].check == true && term_win[1].check == false){
 track_y1 = 120 + 5 + 10;
+}
+else if(term_win[0].check == true && term_win[1].check == true){
+track_y1 = term_win[1].term_y_start + 15;
+}
 string(track_x, track_y1, "Command does not exist yet.", RED, TEXT_B);
 }
 }
@@ -657,7 +703,13 @@ ext[2] = 'T';
 int cluster = find_cluster();
 if(cluster == -1){
 cur_clear();
-track_y1 = 120 + 10 + 5;
+if(term_win[0].check == true && term_win[1].check == false){
+    track_y1 = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "Disk full", DESK_BG, TEXT_B);
@@ -700,7 +752,13 @@ break;
 if(exist){
 if(point_maxim.maxim_flag == 1){
 cur_clear();
-track_y1 = 120 + 5 + 10;
+if(term_win[0].check == true && term_win[1].check == false){
+    track_y1 = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1,"File already exist", DESK_BG, TEXT_B);
@@ -743,7 +801,13 @@ ata_write(DATA_START + (cluster -2)*CLUSTER_SIZE, dst);
 my_free(dst);
 my_free(sector);
 cur_clear();
-track_y1 = 120 + 10 + 5;
+if(term_win[0].check == true && term_win[1].check == false){
+    track_y1 = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "File written successfully", DESK_BG, TEXT_B);
@@ -753,7 +817,13 @@ return;
 }
 my_free(sector);
 cur_clear();
-track_y1 = 120 + 10 + 5;
+if(term_win[0].check == true && term_win[1].check == false){
+    track_y1 = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "Disk is full", DESK_BG, TEXT_B);
@@ -816,7 +886,13 @@ if(match){
 
 (level + i) -> name[0] = 0xE5;
 cur_clear();
-track_y1 = 120 + 10 + 5;
+if(term_win[0].check == true && term_win[1].check == false){
+    track_y1 = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "File deleted", DESK_BG, TEXT_B);
@@ -839,7 +915,13 @@ return;
 }
 }
 cur_clear_b();
-track_y1 = 120 + 10 + 5;
+if(term_win[0].check == true && term_win[1].check == false){
+    track_y1 = 120 + 10 + 5;
+    }
+
+    else if(term_win[0].check == true && term_win[1].check == true){
+     track_y1 = term_win[1].term_y_start+25;
+    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "File does not exist", DESK_BG, TEXT_B);
@@ -1043,7 +1125,7 @@ if(track_y <= term_win[1].term_y_start + 25){
 cur_clear();
 track_x -= 14;
 ad_ten -= 14;
-track_y = 845;
+track_y = (term_win[1].term_y+term_win[1].term_y_start)-4;
 cur_clear();
 }
 position--;
@@ -1169,6 +1251,7 @@ letter_track = 145;
 cur();
 }
 else if(term_win[0].check == true && term_win[1].check == false){
+cur_clear();
 init_term_N(140, 250, 740, 558, 30, "Jan Terminal");
 point_maxim.maxim_flag = 1;
 term_win_active = true;
@@ -1198,16 +1281,26 @@ point_maxim.maxim_flag = 1;
 }
 
 else if(point_maxim.maxim_flag == 1){
-if(term_win[0].check == true){
+if(term_win[0].check == true && term_win[1].check == false){
 task_active = false;
-draw_task_bar();
+//draw_task_bar();
 //terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
 terminal_close();
 j_free(term_win[0].buffer);
 term_win[0].check = false;
-icon(90, 120);
+//icon(90, 120);
 point_maxim.maxim_flag = 0;
 term_win_active = false;
+}
+
+else if(term_win[0].check == true && term_win[1].check == true){
+task_active = false;
+//draw_task_bar();
+//terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
+terminal_close();
+j_free(term_win[1].buffer);
+//icon(90, 120);
+
 }
 
 }
@@ -1215,7 +1308,11 @@ term_win_active = false;
 
 else if(last_key != 0){
 if(point_maxim.maxim_flag == 1 && term_win_active == true){
-if(track_y >= 845){
+if(track_y >= 845 && term_win[0].check == true && term_win[1].check == false){
+cur_clear();
+term_newline_xpromt();
+}
+else if(track_y >= (term_win[1].term_y_start+term_win[1].term_y)-10 && term_win[0].check == true && term_win[1].check == true){
 cur_clear();
 term_newline_xpromt();
 }
