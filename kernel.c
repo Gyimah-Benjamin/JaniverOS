@@ -84,13 +84,10 @@ continue;
 }
 
 if(point_maxim.maxim_flag == 1){
-if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
+if(active_terminal != 0){
+    track_y1 = active_terminal->window.y + 15;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-    }
 track_x += 14;
 ad_ten += 14;
 for(int j = 0; j < 8; j++){
@@ -146,14 +143,10 @@ my_free(sector);
 
 void cat(char *filename) {
     if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
-    track_y = 120 + 10 + 5;
+    track_y1 = active_terminal->window.y + 15;
+    track_y = active_terminal->window.y + 15;;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-     track_y = term_win[1].term_y_start+25;
-    }
     track_x += 14;
     ad_ten += 14;
     char *sector = (char*)my_malloc(512);
@@ -224,20 +217,14 @@ void cat(char *filename) {
                 continue;
                 }
                 if(point_maxim.maxim_flag == 1){
-                 if(track_y1 >= 845 && term_win[0].check == true && term_win[1].check == false){
+                 if(track_y1 >= (active_terminal->window.width+active_terminal->window.y) && active_terminal != 0){
                   cur_clear();
-                  track_y1 = 120 + 10 + 5;
-                  track_y = 120 + 10 + 5;
+                  track_y1 = active_terminal->window.y + 15;
+                  track_y = active_terminal->window.y + 15;
                   track_x += 14;
                   ad_ten += 14;
                   }
-                else if(track_y1 >= (term_win[1].term_y+term_win[1].term_y_start)-10 && term_win[0].check == true && term_win[1].check == true){
-                 cur_clear();
-                  track_y1 = term_win[1].term_y_start+25;
-                  track_y = term_win[1].term_y_start+25;
-                  track_x += 14;
-                  ad_ten += 14;
-                }
+
                 cur_clear();
                 term_input(track_x, track_y1, file_buf[k], DESK_BG, TEXT_B);
                 track_y1 += 10;
@@ -378,7 +365,7 @@ minutes = minutes % 60;
 if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
-track_y1 = 120 + 5 + 10;
+track_y1 = active_terminal->window.y + 15;
 string(track_x, track_y1, "Up-time:", TASK_BG, TEXT_B);
 
 term_input(track_x, track_y1, '0' + hours/10, TASK_BG, TEXT_B);
@@ -402,7 +389,7 @@ term_input(track_x, track_y1, '0' + seconds%10, TASK_BG, TEXT_B);
 else if(point_maxim.maxim_flag == 0){
 track_x += 14;
 ad_ten += 14;
-track_y1 = 5;
+track_y1 = active_terminal->window.y + 15;
 string(track_x, track_y1, "Up-time:", TASK_BG, TEXT_B);
 
 term_input(track_x, track_y1, '0' + hours/10, TASK_BG, TEXT_B);
@@ -434,33 +421,28 @@ if(strcmp(cmd, "help")){
 if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+
+track_y1 = active_terminal->window.y + 15;
+
 string(track_x, track_y1, "--------------------------Available commands---------------------", TASK_BG, TEXT_B);
 track_x += 14;
 ad_ten += 14;
 
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+
+track_y1 = active_terminal->window.y + 15;
+
+
 string(track_x, track_y1,"------>>>>>help, about, clear, version, echo, rm, time, calc<<<<<------", TASK_BG, TEXT_B);
 track_x += 14;
 ad_ten += 14;
 
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+
+track_y1 = active_terminal->window.y + 15;
+
+
+
 string(track_x, track_y1,"---->>>>>date, reboot, history, ls, cat, write, uptime, exit<<<<<-----",TASK_BG, TEXT_B);
+
 }
 else if(point_maxim.maxim_flag == 0){
 track_x += 14;
@@ -483,12 +465,10 @@ if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
 
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+
+track_y1 = active_terminal->window.y + 15;
+
+
 string(track_x, track_y1, "Jan Operating System .", TASK_BG, TEXT_B);
 }
 
@@ -508,12 +488,11 @@ if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
 
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+
+
+track_y1 = active_terminal->window.y + 15;
+
+
 string(track_x, track_y1, "Version 1.0x", TASK_BG, TEXT_B);
 }
 
@@ -529,12 +508,8 @@ else if(cmd[0] == 'e' && cmd[1] == 'c' && cmd[2] == 'h' && cmd[3] == 'o' && cmd[
 track_x += 14;
 ad_ten += 14;
 
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+track_y1 = active_terminal->window.y + 15;
+
 string(track_x, track_y1, cmd + 5, TASK_BG, TEXT_B);
 }
 
@@ -620,12 +595,8 @@ else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 'l' && cmd[3] == 'c' && cmd[
 track_x += 14;
 ad_ten += 14;
 
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+track_y1 = active_terminal->window.y + 15;
+
 
 int k = 5;
 if(cmd[k] == '\0'){
@@ -641,12 +612,8 @@ else{
 track_x += 14;
 ad_ten += 14;
 
-if(term_win[0].check == true && term_win[1].check == false){
-track_y1 = 120 + 5 + 10;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y1 = term_win[1].term_y_start + 15;
-}
+track_y1 = active_terminal->window.y + 15;
+
 string(track_x, track_y1, "Command does not exist yet.", RED, TEXT_B);
 }
 }
@@ -703,13 +670,10 @@ ext[2] = 'T';
 int cluster = find_cluster();
 if(cluster == -1){
 cur_clear();
-if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
+if(active_terminal != 0){
+    track_y1 = active_terminal->window.y + 15;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "Disk full", DESK_BG, TEXT_B);
@@ -752,13 +716,10 @@ break;
 if(exist){
 if(point_maxim.maxim_flag == 1){
 cur_clear();
-if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
+if(active_terminal != 0){
+    track_y1 = active_terminal->window.y + 15;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1,"File already exist", DESK_BG, TEXT_B);
@@ -801,13 +762,10 @@ ata_write(DATA_START + (cluster -2)*CLUSTER_SIZE, dst);
 my_free(dst);
 my_free(sector);
 cur_clear();
-if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
+if(active_terminal != 0){
+    track_y1 = active_terminal->window.y + 15;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "File written successfully", DESK_BG, TEXT_B);
@@ -817,13 +775,10 @@ return;
 }
 my_free(sector);
 cur_clear();
-if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
+if(active_terminal != 0){
+    track_y1 = active_terminal->window.y + 15;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "Disk is full", DESK_BG, TEXT_B);
@@ -886,13 +841,10 @@ if(match){
 
 (level + i) -> name[0] = 0xE5;
 cur_clear();
-if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
+if(active_terminal != 0){
+    track_y1 = active_terminal->window.y + 15;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "File deleted", DESK_BG, TEXT_B);
@@ -915,13 +867,10 @@ return;
 }
 }
 cur_clear_b();
-if(term_win[0].check == true && term_win[1].check == false){
-    track_y1 = 120 + 10 + 5;
+if(active_terminal != 0){
+    track_y1 = active_terminal->window.y + 15;
     }
 
-    else if(term_win[0].check == true && term_win[1].check == true){
-     track_y1 = term_win[1].term_y_start+25;
-    }
 track_x += 14;
 ad_ten += 14;
 string(track_x, track_y1, "File does not exist", DESK_BG, TEXT_B);
@@ -946,7 +895,7 @@ seconds = ((seconds >> 4)*10 + (seconds & 0x0F));
 if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
-track_y1 = 120 + 5 + 10;
+track_y1 = active_terminal->window.y + 15;
 
 draw_char(track_x, track_y1, '0' + hours/10, TASK_BG, TEXT_B);
 track_y1 += 10;
@@ -1007,7 +956,7 @@ year = (year >> 4)*10 + (year & 0x0F);
 if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
-track_y1 = 120 + 5 + 10;
+track_y1 = active_terminal->window.y + 15;
 
 draw_char(track_x, track_y1, '0' + day/10, TASK_BG, TEXT_B);
 track_y1 += 10;
@@ -1098,42 +1047,23 @@ cur_clear();
 draw_task_bar();
 if(last_key){
 if(point_maxim.maxim_flag == 1 && last_key == '\b' && term_win_active == true){
-if(term_win[0].check == true && term_win[1].check == false){
-if(letter_track > 145){
-if(track_y <= 145){
-cur_clear();
-track_x -= 14;
-ad_ten -= 14;
-track_y = 845;
-cur_clear();
-}
-position--;
-track_y -= 10;
-track_y1 -= 10;
-cur_clear_b();
-term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
-buffer[position] = 0;
-cur();
-last_key = 0;
-letter_track -= 10;
-}
-}
 
-else if(term_win[0].check == true && term_win[1].check == true){
-if(letter_track > term_win[1].term_y_start + 25){
-if(track_y <= term_win[1].term_y_start + 25){
+if(active_terminal != 0){
+
+if(letter_track > active_terminal->window.y + 25){
+if(track_y <= active_terminal->window.y + 25){
 cur_clear();
 track_x -= 14;
 ad_ten -= 14;
-track_y = (term_win[1].term_y+term_win[1].term_y_start)-4;
+track_y = (active_terminal->window.width+active_terminal->window.y)-4;
 cur_clear();
 }
-position--;
+active_terminal->position--;
 track_y -= 10;
 track_y1 -= 10;
 cur_clear_b();
 term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
-buffer[position] = 0;
+active_terminal->input_buffer[active_terminal->position] = 0;
 cur();
 last_key = 0;
 letter_track -= 10;
@@ -1152,43 +1082,43 @@ letter_track -= 10;
 }
 
 else if(last_key == DOWN && term_win_active == true){
-if(arrow_count > 0){
-arrow_count--;
+if(active_terminal->arrow_count > 0){
+active_terminal->arrow_count--;
 }
 
-while(track_y > 145){
+while(track_y > active_terminal->window.y+25){
 track_y -= 10;
 letter_track -= 10;
 term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
 cur_clear_b();
 }
-if(arrow_count == 0){
-buffer[0] = 0;
-position = 0;
+if(active_terminal->arrow_count == 0){
+active_terminal->input_buffer[0] = 0;
+active_terminal->position = 0;
 cur();
 }
 else{
 int i;
-int browse = (history_count - arrow_count) % 10;
-for(i = 0; history_store[browse][i] != 0; i++){
-buffer[i] = history_store[browse][i];
-term_input(track_x, track_y, buffer[i], TEXT_W, TEXT_B);
+active_terminal->browse = (history_count - active_terminal->arrow_count) % 10;
+for(i = 0; history_store[active_terminal->browse][i] != 0; i++){
+active_terminal->input_buffer[i] = history_store[active_terminal->browse][i];
+term_input(track_x, track_y, active_terminal->input_buffer[i], TEXT_W, TEXT_B);
 cur_clear();
 track_y += 10;
 letter_track += 10;
 }
-position = i;
+active_terminal->position = i;
 }
 last_key = 0;
 }
 
 else if(last_key == UP &&  term_win_active == true){
-    if(arrow_count < 10 && arrow_count < history_count){
-        arrow_count++;
+    if(active_terminal->arrow_count < 10 && active_terminal->arrow_count < history_count){
+        active_terminal->arrow_count++;
     }
 
     // clear current line
-    while(track_y > 145){
+    while(track_y > active_terminal->window.y+25){
         track_y -= 10;
         letter_track -= 10;
         term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
@@ -1196,37 +1126,37 @@ else if(last_key == UP &&  term_win_active == true){
     }
 
     // get the right slot
-    int browse = (history_count - arrow_count) % 10;
+    active_terminal->browse = (history_count - active_terminal->arrow_count) % 10;
 
     // load into buffer and print
     int i = 0;
-    while(history_store[browse][i] != 0){
-        buffer[i] = history_store[browse][i];
-        term_input(track_x, track_y, buffer[i], TEXT_W, TEXT_B);
+    while(history_store[active_terminal->browse][i] != 0){
+        active_terminal->input_buffer[i] = history_store[active_terminal->browse][i];
+        term_input(track_x, track_y, active_terminal->input_buffer[i], TEXT_W, TEXT_B);
         cur_clear();
         i++;
         track_y += 10;
         letter_track += 10;
     }
-    position = i;
+    active_terminal->position = i;
     last_key = 0;
 }
 
 else if(last_key == '\n'){
-buffer[position] = 0;
-if(position > 0){
+active_terminal->input_buffer[active_terminal->position] = 0;
+if(active_terminal->position > 0){
 int i;
-for(i = 0; buffer[i] != 0; i++){
-history_store[history_count % 10][i] = buffer[i];
+for(i = 0; active_terminal->input_buffer[i] != 0; i++){
+history_store[history_count % 10][i] = active_terminal->input_buffer[i];
 }
 
 history_store[history_count % 10][i] = 0;
 
 history_count++;
-arrow_count = 0;
+active_terminal->arrow_count = 0;
 }
 cur_clear();
-shell(buffer);
+shell(active_terminal->input_buffer);
 if(point_maxim.maxim_flag == 1 && term_win_active == true){
 term_newline();
 cur();
@@ -1234,32 +1164,45 @@ cur();
 else if(point_maxim.maxim_flag == 0 && term_win_active == true){
 term_newline_max();
 }
-position = 0;
+active_terminal->position = 0;
 
 last_key = 0;
 }
 
-else if(last_key == 'Y'){
-if(term_win[0].check == false){
-init_term_N(30, 120, 750, 550, 32, "Jan Terminal");
+else if(last_key == 'W'){
+int slot_free = window_slots();
+if(slot_free != -1){
+active_terminal->window.focused = false;
+cur_clear();
+init_term_N(&term_win[slot_free]);
+
+active_terminal->window.focused = true;
+
 point_maxim.maxim_flag = 1;
 term_win_active = true;
 ad_ten = 0;
-track_x = 65;
-track_y = 120 + 5 + 10 + 10;
-letter_track = 145;
+track_x = term_win[slot_free].window.x+32;
+track_y = term_win[slot_free].window.y+25;
+track_y1 = term_win[slot_free].window.y+25;
+letter_track = term_win[slot_free].window.y+25;
 cur();
 }
-else if(term_win[0].check == true && term_win[1].check == false){
-cur_clear();
-init_term_N(140, 250, 740, 558, 30, "Jan Terminal");
-point_maxim.maxim_flag = 1;
-term_win_active = true;
-ad_ten = 0;
-//letter_track = 145;
-cur();
 }
 
+else if(last_key == 'C'){
+if(active_terminal != 0 && active_terminal->window.focused == true){
+if(slot_counter == 2){
+slot_counter = 0;
+}
+
+int slot_used = window_slots_used();
+
+active_terminal->window.focused = false;
+cur_clear();
+init_term_N_focused(&term_win[slot_used]);
+active_terminal->window.focused = true;
+
+}
 }
 
 else if(last_key == 'P'){
@@ -1286,7 +1229,7 @@ task_active = false;
 //draw_task_bar();
 //terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
 terminal_close();
-j_free(term_win[0].buffer);
+j_free(term_win[0].window.buffer);
 term_win[0].check = false;
 //icon(90, 120);
 point_maxim.maxim_flag = 0;
@@ -1298,7 +1241,7 @@ task_active = false;
 //draw_task_bar();
 //terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
 terminal_close();
-j_free(term_win[1].buffer);
+j_free(term_win[1].window.buffer);
 //icon(90, 120);
 
 }
@@ -1308,21 +1251,17 @@ j_free(term_win[1].buffer);
 
 else if(last_key != 0){
 if(point_maxim.maxim_flag == 1 && term_win_active == true){
-if(track_y >= 845 && term_win[0].check == true && term_win[1].check == false){
+ if(track_y >= (active_terminal->window.y+active_terminal->window.width)-10){
 cur_clear();
 term_newline_xpromt();
 }
-else if(track_y >= (term_win[1].term_y_start+term_win[1].term_y)-10 && term_win[0].check == true && term_win[1].check == true){
-cur_clear();
-term_newline_xpromt();
-}
-buffer[position] = last_key;
+active_terminal->input_buffer[active_terminal->position] = last_key;
 cur_clear();
 term_input(track_x,track_y, last_key,TEXT_W,TEXT_B);
 track_y += 10;
 track_y1 += 10;
 cur();
-position++;
+active_terminal->position++;
 letter_track += 10;
 }
 

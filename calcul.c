@@ -130,7 +130,7 @@ final_val = final_val/10;
 
 
     for(int y = dig_count - 1; y >= 0; y--){
-    draw_char(track_x, track_y1, dig[y] + '0', TEXT_W, TEXT_B);
+    term_input(track_x, track_y1, dig[y] + '0', TEXT_W, TEXT_B);
     track_y1 += 10;
 }
 }

@@ -8,6 +8,8 @@ void draw_task_bar();
 void logo();
 bool task_active = false;
 Terminal term_win[5];
+Terminal *active_terminal = 0;
+int slot_counter = 0;
 
 struct window_size point_maxim;
 unsigned char *back_buffer = (unsigned char *)0x00500000;
@@ -41,78 +43,75 @@ unsigned int simple_logo[576] = {
 
 void init_screen() {
     screen = (unsigned char*)(*(unsigned int*)0x7E28);
+int x = 550, x_start = 0, y = 750, y_start = 0, title = 30;
+char *ptr = "Jan Terminal";
+int j = 0;
+int id = 0;
+
     for(int i = 0; i < 5; i++){
     term_win[i].check = false;
+    term_win[i].window.height = x;
+    term_win[i].window.x = x_start;
+    term_win[i].window.width = y;
+    term_win[i].window.y = y_start;
+    term_win[i].window.title = title;
+    term_win[i].window.title_gap = x_start;
+    term_win[i].window.total_bytes = y * x * 3;
+    term_win[i].position = 0;
+    term_win[i].input_buffer[0] = '\0';
+    term_win[i].browse = 0;
+    term_win[i].arrow_count = 0;
+    term_win[i].window.id = id;
+while(j < 13){
+term_win[i].window.title_buffer[j] = ptr[j];
+j++;
+}
+term_win[i].window.title_buffer[j] = '\0';
+j = 0;
+id++;
+//x_start = x_start+70, y_start = y_start+50, title = 30;
     }
 }
 
-void init_term_N(int x_start, int y_start, int y, int x, int title, char *ptr){
+void init_term_N(Terminal *term){
 int j = 0;
 int m = 0;
 
-if(term_win[0].check == false){
-term_win[0].term_x = x;
-term_win[0].term_x_start = x_start;
-term_win[0].term_y = y;
-term_win[0].term_y_start = y_start;
-term_win[0].term_title = title;
-while(j < 13){
-term_win[0].title_buf[j] = ptr[j];
-j++;
-}
-term_win[0].title_buf[j] = '\0';
-j = 0;
-term_win[0].total_bytes = y * x * 3;
-term_win[0].buffer = (unsigned char*)j_malloc(term_win[0].total_bytes);
-while(m+2 < term_win[0].total_bytes){
-term_win[0].buffer[m++] = 40;
-term_win[0].buffer[m++] = 40;
-term_win[0].buffer[m++] = 40;
+save_term_state(active_terminal);
+
+//track_x = term->window.x + 33;
+//track_y = term->window.y + 25;
+//track_y1 = term->window.y + 25;
+//letter_track = term->window.y + 25;
+
+term->window.buffer = (unsigned char*)j_malloc(term->window.total_bytes);
+while(m+2 < term->window.total_bytes){
+term->window.buffer[m++] = 40;
+term->window.buffer[m++] = 40;
+term->window.buffer[m++] = 40;
 }
 m = 0;
-term_win[0].check = true;
+term->check = true;
+active_terminal = term;
 is_typing = true;
-terminal(term_win[0].term_x_start, term_win[0].term_y_start, term_win[0].term_y, term_win[0].term_x, term_win[0].term_title, 
-term_win[0].title_buf);
+//load_term_state(active_terminal);
+terminal(term);
 
 }
 
+void init_term_N_focused(Terminal *term){
+save_term_state(active_terminal);
 
-else if(term_win[0].check == true && term_win[1].check == false){
-term_win[0].track_x = track_x;
-term_win[0].track_y = track_y;
-term_win[0].track_y1 = track_y1;
 
-track_x = x_start + 33;
-track_y = y_start + 25;
-track_y1 = y_start + 25;
-letter_track = y_start + 25;
+active_terminal = term;
 
-term_win[1].term_x = x;
-term_win[1].term_x_start = x_start;
-term_win[1].term_y = y;
-term_win[1].term_y_start = y_start;
-term_win[1].term_title = title;
-while(j < 13){
-term_win[1].title_buf[j] = ptr[j];
-j++;
-}
-term_win[1].title_buf[j] = '\0';
-j = 0;
+load_term_state(active_terminal);
 
-term_win[1].total_bytes = y * x * 3;
-term_win[1].buffer = (unsigned char*)j_malloc(term_win[1].total_bytes);
-while(m+2 < term_win[1].total_bytes){
-term_win[1].buffer[m++] = 40;
-term_win[1].buffer[m++] = 40;
-term_win[1].buffer[m++] = 40;
-}
-m = 0;
-term_win[1].check = true;
-is_typing = true;
-terminal(term_win[1].term_x_start, term_win[1].term_y_start, term_win[1].term_y, term_win[1].term_x, term_win[1].term_title, term_win[1].title_buf);
-}
+draw_win(active_terminal->window.total_bytes, (((active_terminal->window.x+30)+(active_terminal->window.id*70))*3),
+(((active_terminal->window.y+50)+(active_terminal->window.id*40))*3), active_terminal->window.width*3);
+load_term_state(active_terminal);
 
+slot_counter++;
 }
 
 void fill_screen(int x, int y, unsigned int color){
@@ -128,17 +127,12 @@ int offset = (x * (3*y_max)) + (y * 3);
 unsigned char *fb = (unsigned char*)screen;
 int offset_1 = (x * 3072) + (y * 3);
 
-if(term_win[0].check == true && term_win[1].check == false && is_typing == true){
-    term_win[0].buffer[offset]     = color & 0xFF;
-    term_win[0].buffer[offset + 1] = (color >> 8) & 0xFF;
-    term_win[0].buffer[offset + 2] = (color >> 16) & 0xFF;
+if(active_terminal != 0){
+    active_terminal->window.buffer[offset]     = color & 0xFF;
+    active_terminal->window.buffer[offset + 1] = (color >> 8) & 0xFF;
+    active_terminal->window.buffer[offset + 2] = (color >> 16) & 0xFF;
 }
 
-else if(term_win[0].check == true && term_win[1].check == true && is_typing == true){
-    term_win[1].buffer[offset]     = color & 0xFF;
-    term_win[1].buffer[offset + 1] = (color >> 8) & 0xFF;
-    term_win[1].buffer[offset + 2] = (color >> 16) & 0xFF;
-}
 
 else{
     fb[offset_1]     = color & 0xFF;
@@ -148,20 +142,33 @@ else{
 
 }
 
+void update(int *x, int *y){
+*x = 30 + (active_terminal->window.id*70);
+*y = 50 + (active_terminal->window.id*50);
+
+/*track_x = *x+35;
+track_y = *y+25;
+track_y1 = *y+25;
+letter_track = *y+25;
+ad_ten = 0;
+*/
+}
+
 void draw_win(int total, int x, int y, int w){
 unsigned char *fb = (unsigned char*)screen;
+
+//update(&x, &y);
+
+//x = x*3;
+//y = y*3;
+
 int j = x;
 int m = 0;
 int n = 0;
 int offset = (j * 1024) + y;
 
 while(m < total){
-if(term_win[0].check == true && term_win[1].check == false){
-fb[offset] = term_win[0].buffer[m];
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-fb[offset] = term_win[1].buffer[m];
-}
+fb[offset] = active_terminal->window.buffer[m];
 m++;
 n++;
 offset++;
@@ -177,21 +184,17 @@ offset = (j * 1024) + y;
 }
 
 void mini_draw_win(int x, int y, int y_max){
-if(term_win[0].check == true && is_typing == true){
 unsigned char *fb = (unsigned char*)screen;
 int offset = (x * (3*y_max)) + (y * 3);
+
+x = (x+30)+(active_terminal->window.id*70);
+y = (y+50)+(active_terminal->window.id*40);
 int main_offset = (x*3072) + (y*3);
 
 for(int row = 0; row < 8; row++){
 for(int col = 0; col < 24; col++){
 
-if(term_win[0].check == true && term_win[1].check == false){
-fb[main_offset] = term_win[0].buffer[offset+col+ ((y_max*3)*row)];
-}
-
-else if(term_win[0].check == true && term_win[1].check == true){
-fb[main_offset] = term_win[1].buffer[offset+col+ ((y_max*3)*row)];
-}
+fb[main_offset] = active_terminal->window.buffer[offset+col+ ((y_max*3)*row)];
 main_offset++;
 
 if(col == 23){
@@ -199,26 +202,51 @@ x++;
 main_offset = (x*3072) + (y*3);
 }
 
+
 }
 }
 }
+
+int window_slots(){
+int slot_taken;
+
+for(slot_taken = 0; slot_taken < 5; slot_taken++){
+if(term_win[slot_taken].check == false){
+term_win[slot_taken].check = true;
+return slot_taken;
+}
+else if(term_win[slot_taken].check == true && slot_taken == 2){
+return -1;
+}
+
+}
+
+}
+
+int window_slots_used(){
+
+for(slot_counter = slot_counter; slot_counter < 5; slot_counter++){
+ if(term_win[slot_counter].check == true){
+return slot_counter;
+}
+
+}
+
 }
 
 void mini_draw_rect(int x, int y, int x_term, int y_term, int y_max){
 unsigned char *fb = (unsigned char*)screen;
 int offset = (x * (3*y_max)) + (y * 3);
+
+x = (x+30)+(active_terminal->window.id*70);
+y = (y+50)+(active_terminal->window.id*40);
+
 int main_offset = (x*3072) + (y*3);
 
 for(int row = 0; row < x_term; row++){
 for(int col = 0; col < (y_term*3); col++){
 
-if(term_win[0].check == true && term_win[1].check == false){
-fb[main_offset] = term_win[0].buffer[(offset+((y_max*3)*row)) + col];
-}
-
-else if(term_win[0].check == true && term_win[1].check == true){
-fb[main_offset] = term_win[1].buffer[(offset+((y_max*3)*row)) + col];
-}
+fb[main_offset] = active_terminal->window.buffer[(offset+((y_max*3)*row)) + col];
 main_offset++;
 
 }
@@ -228,14 +256,14 @@ main_offset = (x*3072) + (y*3);
 }
 }
 
-/*void fill_screen1(int x, int y, unsigned int  color){
+void fill_screen1(int x, int y, unsigned int  color){
     unsigned char *fb = (unsigned char*)screen;
     int offset = (x * 3072) + (y * 3);
     fb[offset]     = color & 0xFF;
     fb[offset + 1] = (color >> 8) & 0xFF;
     fb[offset + 2] = (color >> 16) & 0xFF;
 }
-*/
+
 
 /*void draw_log1(int x, int y, unsigned int color){
     int offset = (x * 3072) + (y * 3);
@@ -343,13 +371,10 @@ dest[i] = src[i];
 void draw_rect(int x, int y, int w, int h, int color){
 for(int i = 0; i < h; i++){
 for(int j = 0; j < w; j++){
-if(term_win[0].check == true && term_win[1].check == false){
+if(active_terminal != 0){
 ultim_fill(i, j, w, color);
 }
 
-else if(term_win[0].check == true && term_win[1].check == true){
-ultim_fill(i, j, w, color);
-}
 
 else{
 ultim_fill(x+i, y+j, 0, color);
@@ -357,23 +382,17 @@ ultim_fill(x+i, y+j, 0, color);
 
 }
 }
-//if(term_win[0].check == true){
-//draw_win((w*h*3), x*3, y*3, w*3);
-//}
 
 }
 
 
-void draw_rect_1(int x, int y, int w, int h, int color){
-for(int i = x; i < x+h; i++){
-for(int j = y; j < y+w; j++){
-if(term_win[0].check == true && term_win[1].check == false && is_typing == true){
-ultim_fill(i, j, term_win[0].term_y, color);
+void draw_rect_1(int x, int y, int width, int height, int color){
+for(int i = x; i < x+height; i++){
+for(int j = y; j < y+width; j++){
+if(active_terminal != 0){
+ultim_fill(i, j, active_terminal->window.width, color);
 }
 
-else if(term_win[0].check == true && term_win[1].check == true && is_typing == true){
-ultim_fill(i, j, term_win[1].term_y, color);
-}
 
 else{
 ultim_fill(i, j, 0, color);
@@ -401,13 +420,7 @@ letter_track = 145;
 void cur() {
    if(point_maxim.maxim_flag == 1){
     draw_rect_1(track_x - 2, track_y, 1, 14, RED);
-  if(term_win[0].check == true && term_win[1].check == false){
-    mini_draw_rect(track_x - 2, track_y, 14, 1, term_win[0].term_y);
-  }
-
-  else if(term_win[0].check == true && term_win[1].check == true){
-mini_draw_rect(track_x - 2, track_y, 14, 1, term_win[1].term_y);
-}
+mini_draw_rect(track_x - 2, track_y, 14, 1, active_terminal->window.width);
 
 }
 }
@@ -415,12 +428,7 @@ mini_draw_rect(track_x - 2, track_y, 14, 1, term_win[1].term_y);
 void cur_clear() {
    if(point_maxim.maxim_flag == 1){
     draw_rect_1(track_x - 2, track_y, 1, 14, TEXT_B);
-if(term_win[0].check == true && term_win[1].check == false){
-    mini_draw_rect(track_x - 2, track_y, 14, 1, term_win[0].term_y);
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-mini_draw_rect(track_x - 2, track_y, 14, 1, term_win[1].term_y);
-}
+mini_draw_rect(track_x - 2, track_y, 14, 1, active_terminal->window.width);
 
 }
 }
@@ -428,12 +436,7 @@ mini_draw_rect(track_x - 2, track_y, 14, 1, term_win[1].term_y);
 void cur_clear_b() {
    if(point_maxim.maxim_flag == 1){
     draw_rect_1(track_x - 2, track_y + 10, 1, 14, TEXT_B);
-if(term_win[0].check == true && term_win[1].check == false){
-    mini_draw_rect(track_x - 2, track_y + 10, 14, 1, term_win[0].term_y);
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-mini_draw_rect(track_x - 2, track_y + 10, 14, 1, term_win[1].term_y);
-}
+    mini_draw_rect(track_x - 2, track_y + 10, 14, 1, active_terminal->window.width);
 
 }
 }
@@ -441,36 +444,20 @@ mini_draw_rect(track_x - 2, track_y + 10, 14, 1, term_win[1].term_y);
 
 
 void term_newline(){
-if(term_win[0].check == true && term_win[1].check == false){
 ad_ten += 14;
 track_x += 14;
-string(67 + ad_ten, 120 + 5, "~", TASK_BG, TEXT_B);
-string(65 + ad_ten, 120 + 5 + 10, "$", TASK_BG, TEXT_B);
-track_y = 120 + 5 + 10 + 10;
-track_y1 = 120 + 5 + 10 + 10;
-letter_track = 145;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-ad_ten += 14;
-track_x += 14;
-string(term_win[1].term_x_start+37 + ad_ten, term_win[1].term_y_start + 5, "~", TASK_BG, TEXT_B);
-string(term_win[1].term_x_start+35 + ad_ten, term_win[1].term_y_start + 15, "$", TASK_BG, TEXT_B);
-track_y = term_win[1].term_y_start + 25;
-track_y1 = term_win[1].term_y_start + 25;
-letter_track = term_win[1].term_y_start + 25;
-}
+string(active_terminal->window.x+35 + ad_ten, active_terminal->window.y + 5, "~", TASK_BG, TEXT_B);
+string(active_terminal->window.x+33 + ad_ten, active_terminal->window.y + 15, "$", TASK_BG, TEXT_B);
+track_y = active_terminal->window.y + 25;
+track_y1 = active_terminal->window.y + 25;
+letter_track = active_terminal->window.y + 25;
 
 }
 
 void term_newline_xpromt(){
 ad_ten += 14;
 track_x += 14;
-if(term_win[0].check == true && term_win[1].check == false){
-track_y = 145;
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-track_y = term_win[1].term_y_start+25;
-}
+track_y = active_terminal->window.y+25;
 track_y1 += 10;
 }
 
@@ -490,13 +477,10 @@ for(int row = 0; row < 8; row++){
 unsigned char conect1 = conect[row];
 for(int bit = 0; bit < 8; bit++){
 if((0x80 >> bit) & conect1){
-if(term_win[0].check == true && term_win[1].check == false && is_typing == true){
-ultim_fill(x + row, y + bit, term_win[0].term_y, color);
+if(active_terminal != 0){
+ultim_fill(x + row, y + bit, active_terminal->window.width, color);
 }
 
-else if(term_win[0].check == true && term_win[1].check == true && is_typing == true){
-ultim_fill(x + row, y + bit, term_win[1].term_y, color);
-}
 
 else{
 ultim_fill(x + row, y + bit, 0, color);
@@ -505,12 +489,8 @@ ultim_fill(x + row, y + bit, 0, color);
 }
 
 else{
-if(term_win[0].check == true && term_win[1].check == false && is_typing == true){
-ultim_fill(x + row, y + bit, term_win[0].term_y, color1);
-}
-
-else if(term_win[0].check == true && term_win[1].check == true && is_typing == true){
-ultim_fill(x + row, y + bit, term_win[1].term_y, color1);
+if(active_terminal != 0){
+ultim_fill(x + row, y + bit, active_terminal->window.width, color1);
 }
 
 else{
@@ -518,6 +498,26 @@ ultim_fill(x + row, y + bit, 0, color1);
 }
 
 }
+}
+}
+}
+
+
+void draw_char_1(int x, int y, char al, int color, int color1){
+unsigned char* conect = (unsigned char*)font[al];
+for(int row = 0; row < 8; row++){
+unsigned char conect1 = conect[row];
+for(int bit = 0; bit < 8; bit++){
+if((0x80 >> bit) & conect1){
+fill_screen1(x + row, y + bit, color);
+
+}
+
+else{
+fill_screen1(x + row, y + bit, color1);
+}
+
+
 }
 }
 }
@@ -558,15 +558,13 @@ i++;
 }
 
 void term_input(int x, int y, char al, int color, int color1){
-if(term_win[0].check == true && term_win[1].check == false && is_typing == true){
+if(active_terminal != 0){
+
 draw_char(x, y, al, color, color1);
-mini_draw_win(x, y, term_win[0].term_y);
+
+mini_draw_win(x, y, active_terminal->window.width);
 }
 
-else if(term_win[0].check == true && term_win[1].check == true && is_typing == true){
-draw_char(x, y, al, color, color1);
-mini_draw_win(x, y, term_win[1].term_y);
-}
 
 else{
 draw_char(x, y, al, color, color1);
@@ -575,39 +573,49 @@ mini_draw_win(x, y, 1024);
 }
 
 
-void terminal(int x, int y, int term_y, int term_x, int term_title, char *str ){
+void gen_window(Window *win){
 int incre = 0;
-int screen_new = x + term_title;
-int black_term = term_x - term_title;
 
-draw_rect(x, y, term_y, term_x, TEXT_B);
-draw_rect(x, y, term_y, term_title, GREYY);
 
-for(int i = 0; str[i] != 0; i++){
-draw_char((term_title/2)-5, ((term_y/2)-30) + incre, str[i], TEXT_W, GREYY);
+draw_rect(win->x, win->y, win->width, win->height, TEXT_B);
+draw_rect(win->x, win->y, win->width, win->title, GREYY);
+
+for(int i = 0; win->title_buffer[i] != 0; i++){
+draw_char((win->title/2)-5, ((win->width/2)-30) + incre, win->title_buffer[i], TEXT_W, GREYY);
 incre += 10;
 }
 
-if(term_win[0].check == true && term_win[1].check == false){
-draw_win((term_win[0].total_bytes), (term_win[0].term_x_start*3), (term_win[0].term_y_start*3), (term_win[0].term_y*3));
+draw_win((win->total_bytes), (((win->x+30)+(win->id*70))*3), (((win->y+50)+(win->id*40))*3), (win->width*3));
+
+
 }
 
-else if(term_win[0].check == true && term_win[1].check == true){
-draw_win((term_win[1].total_bytes), (term_win[1].term_x_start*3), (term_win[1].term_y_start*3), (term_win[1].term_y*3));
-}
+void terminal(Terminal *term){
+Window *win = &term->window;
 
-if(term_win[0].check == true && term_win[1].check == false){
-string(term_title + 35, y + 5, "~", TASK_BG, TEXT_B);
-string(term_title + 33, y + 5 + 10, "$", TASK_BG, TEXT_B);
-}
+gen_window(win);
 
-else if(term_win[0].check == true && term_win[1].check == true){
-string(x + 35, y + 5, "~", TASK_BG, TEXT_B);
-string(x + 33, y + 5 + 10, "$", TASK_BG, TEXT_B);
-}
+string(win->title_gap + 35, win->y + 5, "~", TASK_BG, TEXT_B);
+string(win->title_gap + 33, win->y + 5 + 10, "$", TASK_BG, TEXT_B);
+
 icon(737, 110);
 }
 
+void save_term_state(Terminal *term){
+term->track_x = track_x;
+term->track_y = track_y;
+term->track_y1 = track_y1;
+term->letter_track = letter_track;
+term->ad_ten = ad_ten;
+}
+
+void load_term_state(Terminal *term){
+track_x = term->track_x;
+track_y = term->track_y;
+track_y1 = term->track_y1;
+letter_track = term->letter_track;
+ad_ten = term->ad_ten;
+}
 
 void terminal_max(int x, int y, int term_y, int term_x, int term_title, char *str ){
 int incre = 0;
@@ -721,19 +729,19 @@ hours = ((hours >> 4)*10 + (hours & 0x0F));
 minutes = ((minutes >> 4)*10 + (minutes & 0x0F));
 seconds = ((seconds >> 4)*10 + (seconds & 0x0F));
 
-term_input(745, 945, '0' + hours/10, TEXT_W, GREYY);
-term_input(745, 955, '0' + hours%10, TEXT_W, GREYY);
+draw_char_1(745, 945, '0' + hours/10, TEXT_W, GREYY);
+draw_char_1(745, 955, '0' + hours%10, TEXT_W, GREYY);
 
 
-term_input(745, 965, ':', TEXT_W, GREYY);
+draw_char_1(745, 965, ':', TEXT_W, GREYY);
 
-term_input(745, 975, '0' + minutes/10, TEXT_W, GREYY);
-term_input(745, 985, '0' + minutes%10, TEXT_W, GREYY);
+draw_char_1(745, 975, '0' + minutes/10, TEXT_W, GREYY);
+draw_char_1(745, 985, '0' + minutes%10, TEXT_W, GREYY);
 
-term_input(745, 995, ':', TEXT_W, GREYY);
+draw_char_1(745, 995, ':', TEXT_W, GREYY);
 
-term_input(745, 1005, '0' + seconds/10, TEXT_W, GREYY);
-term_input(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
+draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, GREYY);
+draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
 
 }
 else{
@@ -748,19 +756,19 @@ hours = ((hours >> 4)*10 + (hours & 0x0F));
 minutes = ((minutes >> 4)*10 + (minutes & 0x0F));
 seconds = ((seconds >> 4)*10 + (seconds & 0x0F));
 
-term_input(745, 945, '0' + hours/10, TEXT_W, GREYY);
-term_input(745, 955, '0' + hours%10, TEXT_W, GREYY);
+draw_char_1(745, 945, '0' + hours/10, TEXT_W, GREYY);
+draw_char_1(745, 955, '0' + hours%10, TEXT_W, GREYY);
 
 
-term_input(745, 965, ':', TEXT_W, GREYY);
+draw_char_1(745, 965, ':', TEXT_W, GREYY);
 
-term_input(745, 975, '0' + minutes/10, TEXT_W, GREYY);
-term_input(745, 985, '0' + minutes%10, TEXT_W, GREYY);
+draw_char_1(745, 975, '0' + minutes/10, TEXT_W, GREYY);
+draw_char_1(745, 985, '0' + minutes%10, TEXT_W, GREYY);
 
-term_input(745, 995, ':', TEXT_W, GREYY);
+draw_char_1(745, 995, ':', TEXT_W, GREYY);
 
-term_input(745, 1005, '0' + seconds/10, TEXT_W, GREYY);
-term_input(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
+draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, GREYY);
+draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
 
 task_active = true;
 }

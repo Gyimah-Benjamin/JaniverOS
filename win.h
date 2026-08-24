@@ -25,6 +25,9 @@ extern int track_y1;
 extern int letter_track;
 extern bool task_active;
 extern bool is_typing;
+extern int slot_counter;
+int window_slots();
+int window_slots_used();
 void fill_screen(int x, int y, unsigned int color);
 void fill_screen1(int x, int y, unsigned int color);
 void icon(int xth, int yth);
@@ -39,9 +42,8 @@ void term_input(int x, int y, char al, int color, int color1);
 void flush();
 void term_newline_xpromt();
 void term_newline_max();
-void terminal(int x, int y, int term_y, int term_x, int term_title, char *str);
-void init_term_N(int x_start, int y_start, int y, int x, int title, char *ptr);
 void mini_draw_win(int x, int y, int y_max);
+void draw_win(int total, int x, int y, int w);
 void terminal_max(int x, int y, int term_y, int term_x, int term_title, char *str );
 //void terminal_close(int x, int y, int term_y, int term_x, int term_title, char *str);
 void terminal_close();
@@ -64,20 +66,47 @@ char maxim_flag;
 }__attribute__((packed));
 
 typedef struct{
-int term_x;
-int term_x_start;
-int term_y;
-int term_y_start;
-int term_title;
-bool check;
-char title_buf[14];
-unsigned char* buffer;
+int x;
+int y;
+
+int width;
+int height;
+int id;
+
+int title;
+int title_gap;
+char title_buffer[14];
+unsigned char *buffer;
 int total_bytes;
+
+bool visible;
+bool focused;
+}__attribute__ ((packed)) Window;
+
+typedef struct{
+Window window;
+
+bool check;
+
 int track_x;
 int track_y;
 int track_y1;
+int letter_track;
+int ad_ten;
+int position;
+int browse;
+int arrow_count;
+char input_buffer[1024];
 }__attribute__ ((packed)) Terminal;
 
 extern Terminal term_win[5];
+
+void terminal(Terminal *term);
+void init_term_N(Terminal *term);
+void init_term_N_focused(Terminal *term);
+extern Terminal *active_terminal;
+
+void save_term_state(Terminal *term);
+void load_term_state(Terminal *term);
 
 #endif
