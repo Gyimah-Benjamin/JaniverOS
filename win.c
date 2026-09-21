@@ -10,6 +10,7 @@ bool task_active = false;
 Terminal term_win[5];
 Terminal *active_terminal = 0;
 int slot_counter = 0;
+int total_windows = 0;
 
 struct window_size point_maxim;
 unsigned char *back_buffer = (unsigned char *)0x00500000;
@@ -69,7 +70,6 @@ j++;
 term_win[i].window.title_buffer[j] = '\0';
 j = 0;
 id++;
-//x_start = x_start+70, y_start = y_start+50, title = 30;
     }
 }
 
@@ -79,10 +79,6 @@ int m = 0;
 
 save_term_state(active_terminal);
 
-//track_x = term->window.x + 33;
-//track_y = term->window.y + 25;
-//track_y1 = term->window.y + 25;
-//letter_track = term->window.y + 25;
 
 term->window.buffer = (unsigned char*)j_malloc(term->window.total_bytes);
 while(m+2 < term->window.total_bytes){
@@ -94,9 +90,8 @@ m = 0;
 term->check = true;
 active_terminal = term;
 is_typing = true;
-//load_term_state(active_terminal);
 terminal(term);
-
+total_windows++;
 }
 
 void init_term_N_focused(Terminal *term){
@@ -142,25 +137,9 @@ else{
 
 }
 
-void update(int *x, int *y){
-*x = 30 + (active_terminal->window.id*70);
-*y = 50 + (active_terminal->window.id*50);
-
-/*track_x = *x+35;
-track_y = *y+25;
-track_y1 = *y+25;
-letter_track = *y+25;
-ad_ten = 0;
-*/
-}
 
 void draw_win(int total, int x, int y, int w){
 unsigned char *fb = (unsigned char*)screen;
-
-//update(&x, &y);
-
-//x = x*3;
-//y = y*3;
 
 int j = x;
 int m = 0;
@@ -215,7 +194,7 @@ if(term_win[slot_taken].check == false){
 term_win[slot_taken].check = true;
 return slot_taken;
 }
-else if(term_win[slot_taken].check == true && slot_taken == 2){
+else if(term_win[slot_taken].check == true && slot_taken == 3){
 return -1;
 }
 
@@ -233,6 +212,7 @@ return slot_counter;
 }
 
 }
+
 
 void mini_draw_rect(int x, int y, int x_term, int y_term, int y_max){
 unsigned char *fb = (unsigned char*)screen;
@@ -400,21 +380,43 @@ ultim_fill(i, j, 0, color);
 
 }
 }
-//if(term_win[0].check == true){
-//draw_win((w*h*3), x*3, y*3, w*3);
-//}
+
+}
+
+void draw_rect_2(int x, int y, int width, int height, int color){
+for(int i = x; i < x+height; i++){
+for(int j = y; j < y+width; j++){
+if(active_terminal != 0){
+fill_screen1(i, j, color);
+}
+
+
+
+}
+}
 
 }
 
 void clear(){
-if(point_maxim.maxim_flag == 1){
-draw_rect(60, 120, TERM_Y, TERM_X - 30, TEXT_B);
+if(active_terminal->window.focused == true){
+draw_rect_1(active_terminal->window.x+30, active_terminal->window.y, active_terminal->window.width, active_terminal->window.height, TEXT_B);
+draw_win((active_terminal->window.total_bytes), (((active_terminal->window.x+30)+(active_terminal->window.id*70))*3),
+(((active_terminal->window.y+50)+(active_terminal->window.id*40))*3), (active_terminal->window.width*3));
+cur_clear();
 ad_ten = -14;
-track_x = 50;
-track_y = 120 + 5 + 10 + 10;
-track_y1 = 120 + 5 + 10 + 10;
-letter_track = 145;
+track_x = active_terminal->window.x+32-14;
+track_y = active_terminal->window.y+25;
+track_y1 = active_terminal->window.y+25;
+letter_track = active_terminal->window.y+25;
 }
+}
+
+void jan_editor(){
+if(active_terminal->window.focused == true){
+draw_rect_2(((active_terminal->window.x+60)+(active_terminal->window.id*70)),((active_terminal->window.y+50)+(active_terminal->window.id*40)), (active_terminal->window.width), (active_terminal->window.height), TEXT_B);
+
+}
+
 }
 
 void cur() {
@@ -591,6 +593,8 @@ draw_win((win->total_bytes), (((win->x+30)+(win->id*70))*3), (((win->y+50)+(win-
 }
 
 void terminal(Terminal *term){
+//create_task(terminal_task);
+
 Window *win = &term->window;
 
 gen_window(win);
@@ -680,20 +684,20 @@ for(int i = 0; name[i] != 0; i++){
 for(int j = 0; j < 1; j++){
 draw_cursor(ly, lx, 1);
 
-delay(92200500);
+delay(2200500);
 draw_cursor(ly, lx, 0);
 
-delay(92200500);
+delay(2200500);
 }
 
 draw_char_l(ly, lx + 8, name[i], 0x00444444, 0x00000000, 0);
 
-delay(29500000);
+delay(500000);
 draw_char_l(ly, lx + 4, name[i], 0x00888888, 0x00000000, 1);
 
-delay(11000000);
+delay(1000000);
 draw_char_l(ly, lx, name[i], TEXT_W, 0x00000000, 2);
-delay(110500000);
+delay(10500000);
 lx += 10 * 2;
 
 }
@@ -701,7 +705,7 @@ lx += 10 * 2;
 for(int i = 0; i < 6; i++){
 draw_cursor(ly, lx, i%2);
 
-delay(110500000);
+delay(10500000);
 }
 
 draw_cursor(ly, lx, 0);

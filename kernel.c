@@ -9,6 +9,7 @@
 #include "font.h"
 #include "win.h"
 #include "calcul.h"
+#include "mul_task.h"
 #define GREEN 0x02
 #define NO 0x0F
 #define GREY 0x07
@@ -31,6 +32,7 @@ int ad_ten = 0;
 int letter_track = 145;
 bool is_typing = false;
 bool term_win_active = false;
+bool terminal_id_bool = false;
 void init_history(){
 for(int i = 0; i < 10; i++){
 for(int j = 0; j < 255; j++){
@@ -607,6 +609,9 @@ calc(cmd + 5,strlen(cmd + 5));
 }
 }
 
+else if(strcmp(cmd, "jword")){
+jan_editor();
+}
 
 else{
 track_x += 14;
@@ -1013,6 +1018,27 @@ port_send(0x64, 0xFE);
 void shut(){
 port_send(0x604, 0x2000);
 }
+
+void os_tasks(){
+while(1){
+
+if(point_maxim.maxim_flag == 1){
+if((ticks / 15) % 2 == 0){
+cur();
+}
+else{
+cur_clear();
+}
+}
+draw_task_bar();
+}
+
+}
+
+/*void task_two(){
+while(1){
+}
+}*/
 __attribute__((section(".text.kernel_main")))
 void kernel_main() {
     init_gdt();
@@ -1035,16 +1061,13 @@ int position = 0;
 int pro = 0;
 int blink = 0;
 pro = cursor;
+
+create_task(os_tasks);
+//create_task(task_two);
+
+__asm__ volatile("sti");
+
     while (1) {
-if(point_maxim.maxim_flag == 1){
-if((ticks / 15) % 2 == 0){
-cur();
-}
-else{
-cur_clear();
-}
-}
-draw_task_bar();
 if(last_key){
 if(point_maxim.maxim_flag == 1 && last_key == '\b' && term_win_active == true){
 
@@ -1159,7 +1182,6 @@ cur_clear();
 shell(active_terminal->input_buffer);
 if(point_maxim.maxim_flag == 1 && term_win_active == true){
 term_newline();
-cur();
 }
 else if(point_maxim.maxim_flag == 0 && term_win_active == true){
 term_newline_max();
@@ -1174,6 +1196,7 @@ int slot_free = window_slots();
 if(slot_free != -1){
 active_terminal->window.focused = false;
 cur_clear();
+cur_clear();
 init_term_N(&term_win[slot_free]);
 
 active_terminal->window.focused = true;
@@ -1185,13 +1208,13 @@ track_x = term_win[slot_free].window.x+32;
 track_y = term_win[slot_free].window.y+25;
 track_y1 = term_win[slot_free].window.y+25;
 letter_track = term_win[slot_free].window.y+25;
-cur();
+
 }
 }
 
 else if(last_key == 'C'){
 if(active_terminal != 0 && active_terminal->window.focused == true){
-if(slot_counter == 2){
+if(slot_counter == total_windows){
 slot_counter = 0;
 }
 
@@ -1224,13 +1247,24 @@ point_maxim.maxim_flag = 1;
 }
 
 else if(point_maxim.maxim_flag == 1){
-if(term_win[0].check == true && term_win[1].check == false){
-task_active = false;
+if(active_terminal != 0){
+j_free(active_terminal->window.buffer);
+active_terminal->check = false;
+flush();
+for(int i = 0; i < 5; i++){
+if(term_win[i].check == true){
+active_terminal = &term_win[i];
+init_term_N_focused(&term_win[i]);
+}
+}
+active_terminal->window.focused = true;
+
+//task_active = false;
 //draw_task_bar();
 //terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
-terminal_close();
-j_free(term_win[0].window.buffer);
-term_win[0].check = false;
+//terminal_close();
+//j_free(term_win[0].window.buffer);
+//term_win[0].check = false;
 //icon(90, 120);
 point_maxim.maxim_flag = 0;
 term_win_active = false;

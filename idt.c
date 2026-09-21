@@ -44,5 +44,5 @@ extern void timer_asm();
 idt_fill_address(33, (unsigned int)keyboard_asm, 0x08, 0x8E);
 idt_fill_address(32, (unsigned int)timer_asm, 0x08, 0x8E);
 __asm__ volatile("lidt %0" :: "m"(pointer));
-__asm__ volatile("sti");
+//__asm__ volatile("sti");
 }
