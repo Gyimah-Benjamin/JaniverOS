@@ -39,6 +39,8 @@ task_count++;
 }
 
 unsigned int scheduler(unsigned int current_esp){
+if(task_count <= 1)return current_esp;
+
 if(started == 0){
 started = 1;
 current_task = 1;

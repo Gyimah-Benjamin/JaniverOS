@@ -6,6 +6,7 @@ global dum_asm
 extern timer_handler
 extern get_key
 extern scheduler
+extern mouse_handler
 
 keyboard_asm:
     pusha
@@ -14,6 +15,21 @@ keyboard_asm:
     out 0x20, al ; send AL to port 0x20 (end of interrupt)
     popa
     iret
+
+global mouse_asm
+
+mouse_asm:
+   pusha
+   call mouse_handler
+
+   mov al, 0x20
+   out 0xA0, al
+
+   mov al, 0x20
+   out 0x20, al
+
+   popa
+   iret
 
 timer_asm:
     pusha

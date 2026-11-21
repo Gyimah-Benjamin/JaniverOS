@@ -26,6 +26,7 @@ extern int letter_track;
 extern bool task_active;
 extern bool is_typing;
 extern int slot_counter;
+extern bool term_win_active;
 extern int total_windows;
 int window_slots();
 int window_slots_used();
@@ -42,6 +43,10 @@ void draw_wallpaper();
 void term_newline();
 void term_input(int x, int y, char al, int color, int color1);
 void flush();
+void draw_mouse_cursor(int x, int y, unsigned int color);
+void update_mouse_cursor(int x, int y);
+void redraw_windows();
+void open_terminal();
 void term_newline_xpromt();
 void term_newline_max();
 void mini_draw_win(int x, int y, int y_max);
@@ -84,6 +89,8 @@ int total_bytes;
 
 bool visible;
 bool focused;
+bool minimized;
+bool maximized;
 }__attribute__ ((packed)) Window;
 
 typedef struct{

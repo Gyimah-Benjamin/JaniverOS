@@ -1,8 +1,16 @@
 #include "win.h"
 #include "font.h"
 #include "memory.h"
+#include "mouse.h"
+
 //#include "bmp.h"
 //#include "wallpaper.h"
+
+unsigned char mouse_saved[12][6][3];
+int old_mouse_x = 0;
+int old_mouse_y = 0;
+int mouse_cursor_drawn = 0;
+
 void draw_desktop();
 void draw_task_bar();
 void logo();
@@ -11,6 +19,7 @@ Terminal term_win[5];
 Terminal *active_terminal = 0;
 int slot_counter = 0;
 int total_windows = 0;
+void hide_mouse_cursor(void);
 
 struct window_size point_maxim;
 unsigned char *back_buffer = (unsigned char *)0x00500000;
@@ -63,6 +72,10 @@ int id = 0;
     term_win[i].browse = 0;
     term_win[i].arrow_count = 0;
     term_win[i].window.id = id;
+    term_win[i].window.visible = false;
+    term_win[i].window.focused = false;
+    term_win[i].window.minimized = false;
+    term_win[i].window.maximized = false;
 while(j < 13){
 term_win[i].window.title_buffer[j] = ptr[j];
 j++;
@@ -88,6 +101,11 @@ term->window.buffer[m++] = 40;
 }
 m = 0;
 term->check = true;
+term->window.visible = true;
+term->window.focused = true;
+term->window.minimized = false;
+term->window.maximized = false;
+
 active_terminal = term;
 is_typing = true;
 terminal(term);
@@ -160,6 +178,41 @@ offset = (j * 1024) + y;
 
 }
 
+}
+
+void redraw_windows(){
+
+    hide_mouse_cursor();
+
+//    flush();
+
+    Terminal *previous_terminal = active_terminal;
+
+    for(int i = 0; i < 5; i++){
+
+        if(term_win[i].window.visible == false)
+            continue;
+
+        if(term_win[i].window.minimized == true)
+            continue;
+
+        active_terminal = &term_win[i];
+
+        draw_win(
+            active_terminal->window.total_bytes,
+            (((active_terminal->window.x + 30) +
+            (active_terminal->window.id * 70)) * 3),
+
+            (((active_terminal->window.y + 50) +
+            (active_terminal->window.id * 40)) * 3),
+
+            active_terminal->window.width * 3
+        );
+    }
+
+    active_terminal = previous_terminal;
+
+    update_mouse_cursor(mouse_x, mouse_y);
 }
 
 void mini_draw_win(int x, int y, int y_max){
@@ -415,6 +468,11 @@ void jan_editor(){
 if(active_terminal->window.focused == true){
 draw_rect_2(((active_terminal->window.x+60)+(active_terminal->window.id*70)),((active_terminal->window.y+50)+(active_terminal->window.id*40)), (active_terminal->window.width), (active_terminal->window.height), TEXT_B);
 
+ad_ten = -14;
+track_x = active_terminal->window.x+32-14;
+track_y = active_terminal->window.y+25;
+track_y1 = active_terminal->window.y+25;
+letter_track = active_terminal->window.y+25;
 }
 
 }
@@ -540,6 +598,85 @@ draw_rect(x + row * scale, y + bit * scale, scale, scale, color1);
 }
 }
 
+void draw_mouse_cursor(int x, int y, unsigned int color){
+for(int row = 0; row < 12; row++){
+for(int col = 0; col <= row/2; col++){
+
+int px = x + col;
+int py = y + row;
+if(py < 0 || py >= 768 || px < 0 || px >= 1024)continue;
+
+fill_screen1(py, px, color);
+}
+}
+
+}
+
+void update_mouse_cursor(int x, int y){
+unsigned char *fb = (unsigned char*)screen;
+
+if(mouse_cursor_drawn){
+for(int row = 0; row < 12; row++){
+for(int col = 0; col < 6; col++){
+int py = old_mouse_y + row;
+int px = old_mouse_x + col;
+
+if(py < 0 || py >= 768 || px < 0 || px >= 1024)continue;
+
+int offset = (py*3072) + (px*3);
+
+fb[offset] = mouse_saved[row][col][0];
+fb[offset+1] = mouse_saved[row][col][1];
+fb[offset+2] = mouse_saved[row][col][2];
+
+}
+}
+}
+
+for(int row = 0; row < 12; row++){
+for(int col = 0; col < 6; col++){
+int py = y+row;
+int px = x+col;
+
+if(py < 0 || py >= 768 || px < 0 || px >= 1024)continue;
+int offset = (py*3072) + (px*3);
+
+mouse_saved[row][col][0] = fb[offset];
+mouse_saved[row][col][1] = fb[offset+1];
+mouse_saved[row][col][2] = fb[offset+2];
+}
+}
+
+draw_mouse_cursor(x, y, 0xFFFFFF);
+
+old_mouse_x = x;
+old_mouse_y = y;
+mouse_cursor_drawn = 1;
+}
+
+void hide_mouse_cursor(){
+
+if(!mouse_cursor_drawn)return;
+unsigned char *fb = (unsigned char*)screen;
+
+for(int row = 0; row < 12; row++){
+for(int col = 0; col < 6; col++){
+int py = old_mouse_y + row;
+int px = old_mouse_x + col;
+
+if(py < 0 || py >= 768 || px < 0 || px >= 1024)continue;
+
+int offset = (py*3072) + (px*3);
+
+fb[offset] = mouse_saved[row][col][0];
+fb[offset+1] = mouse_saved[row][col][1];
+fb[offset+2] = mouse_saved[row][col][2];
+
+}
+}
+mouse_cursor_drawn = 0;
+}
+
 void string_l(int x, int y, char *str, int color, int color1, int scale){
 int i = 0;
 while(str[i] != 0){
@@ -582,6 +719,10 @@ int incre = 0;
 draw_rect(win->x, win->y, win->width, win->height, TEXT_B);
 draw_rect(win->x, win->y, win->width, win->title, GREYY);
 
+draw_rect_1(7, win->width - 58, 14, 16, 0x00E6B422);
+draw_rect_1(7, win->width - 38, 14, 16, 0x0000AA00);
+draw_rect_1(7, win->width - 18, 14, 16, RED);
+
 for(int i = 0; win->title_buffer[i] != 0; i++){
 draw_char((win->title/2)-5, ((win->width/2)-30) + incre, win->title_buffer[i], TEXT_W, GREYY);
 incre += 10;
@@ -594,6 +735,7 @@ draw_win((win->total_bytes), (((win->x+30)+(win->id*70))*3), (((win->y+50)+(win-
 
 void terminal(Terminal *term){
 //create_task(terminal_task);
+hide_mouse_cursor();
 
 Window *win = &term->window;
 
@@ -603,6 +745,8 @@ string(win->title_gap + 35, win->y + 5, "~", TASK_BG, TEXT_B);
 string(win->title_gap + 33, win->y + 5 + 10, "$", TASK_BG, TEXT_B);
 
 icon(737, 110);
+
+update_mouse_cursor(mouse_x, mouse_y);
 }
 
 void save_term_state(Terminal *term){
@@ -775,5 +919,27 @@ draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, GREYY);
 draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
 
 task_active = true;
+}
+}
+
+
+void open_terminal(){
+int slot_free = window_slots();
+if(slot_free != -1){
+active_terminal->window.focused = false;
+cur_clear();
+cur_clear();
+init_term_N(&term_win[slot_free]);
+
+active_terminal->window.focused = true;
+
+point_maxim.maxim_flag = 1;
+term_win_active = true;
+ad_ten = 0;
+track_x = term_win[slot_free].window.x+32;
+track_y = term_win[slot_free].window.y+25;
+track_y1 = term_win[slot_free].window.y+25;
+letter_track = term_win[slot_free].window.y+25;
+
 }
 }

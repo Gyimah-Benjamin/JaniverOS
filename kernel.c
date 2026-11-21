@@ -10,6 +10,8 @@
 #include "win.h"
 #include "calcul.h"
 #include "mul_task.h"
+#include "mouse.h"
+
 #define GREEN 0x02
 #define NO 0x0F
 #define GREY 0x07
@@ -30,8 +32,8 @@ int track_y = 120 + 5 + 10 + 10;
 int track_y1 = 120 + 5 + 10 + 10;
 int ad_ten = 0;
 int letter_track = 145;
-bool is_typing = false;
 bool term_win_active = false;
+bool is_typing = false;
 bool terminal_id_bool = false;
 void init_history(){
 for(int i = 0; i < 10; i++){
@@ -1019,7 +1021,7 @@ void shut(){
 port_send(0x604, 0x2000);
 }
 
-void os_tasks(){
+/*void os_tasks(){
 while(1){
 
 if(point_maxim.maxim_flag == 1){
@@ -1030,11 +1032,11 @@ else{
 cur_clear();
 }
 }
-draw_task_bar();
+//draw_task_bar();
 }
 
 }
-
+*/
 /*void task_two(){
 while(1){
 }
@@ -1043,6 +1045,7 @@ __attribute__((section(".text.kernel_main")))
 void kernel_main() {
     init_gdt();
     initialize_pic();
+    mouse_init();
     init_history();
     init_screen();
     boot_anime();
@@ -1062,12 +1065,32 @@ int pro = 0;
 int blink = 0;
 pro = cursor;
 
-create_task(os_tasks);
+//create_task(os_tasks);
 //create_task(task_two);
 
 __asm__ volatile("sti");
 
     while (1) {
+if(mouse_take_left_click()){
+int click_x = mouse_x;
+int click_y = mouse_y;
+
+if(click_x >= 40 && click_x <= 64 && click_y >= 90 && click_y <= 114){
+open_terminal();
+redraw_windows();
+}
+
+}
+
+if(point_maxim.maxim_flag == 1){
+if((ticks / 15) % 2 == 0){
+cur();
+}
+else{
+cur_clear();
+}
+}
+draw_task_bar();
 if(last_key){
 if(point_maxim.maxim_flag == 1 && last_key == '\b' && term_win_active == true){
 
@@ -1192,24 +1215,7 @@ last_key = 0;
 }
 
 else if(last_key == 'W'){
-int slot_free = window_slots();
-if(slot_free != -1){
-active_terminal->window.focused = false;
-cur_clear();
-cur_clear();
-init_term_N(&term_win[slot_free]);
-
-active_terminal->window.focused = true;
-
-point_maxim.maxim_flag = 1;
-term_win_active = true;
-ad_ten = 0;
-track_x = term_win[slot_free].window.x+32;
-track_y = term_win[slot_free].window.y+25;
-track_y1 = term_win[slot_free].window.y+25;
-letter_track = term_win[slot_free].window.y+25;
-
-}
+open_terminal();
 }
 
 else if(last_key == 'C'){

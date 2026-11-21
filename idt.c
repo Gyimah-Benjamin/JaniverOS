@@ -41,8 +41,11 @@ pic_initialisation();
 
 extern void keyboard_asm();
 extern void timer_asm();
+extern void mouse_asm();
+
 idt_fill_address(33, (unsigned int)keyboard_asm, 0x08, 0x8E);
 idt_fill_address(32, (unsigned int)timer_asm, 0x08, 0x8E);
+idt_fill_address(44, (unsigned int)mouse_asm, 0x08, 0x8E);
 __asm__ volatile("lidt %0" :: "m"(pointer));
 //__asm__ volatile("sti");
 }
