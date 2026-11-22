@@ -7,6 +7,7 @@
 #define TEXT_B 0x00000000
 #define RED 0x00FF0000
 #define GREYY 0x00333333
+#define CHARCOAL 0x00444444
 #define SCREEN_W 1024
 #define SCREEN_H 768
 #define MAXIMUM 728

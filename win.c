@@ -2,6 +2,7 @@
 #include "font.h"
 #include "memory.h"
 #include "mouse.h"
+#include "janiver_logo.h"
 
 //#include "bmp.h"
 //#include "wallpaper.h"
@@ -14,12 +15,21 @@ int mouse_cursor_drawn = 0;
 void draw_desktop();
 void draw_task_bar();
 void logo();
+void redraw_windows();
+void present_frame();
+
 bool task_active = false;
 Terminal term_win[5];
 Terminal *active_terminal = 0;
 int slot_counter = 0;
 int total_windows = 0;
 void hide_mouse_cursor(void);
+unsigned char *render_buffer = 0;
+void redraw_windows_z_order(Terminal *active_terminal);
+void draw_janiver_text(int top, int left, unsigned int color);
+void draw_janiver_wave(int top, int left, int progress, int phase, unsigned int color);
+void draw_loading_text(int top, int left, unsigned int color);
+void draw_spinner(int cx, int cy, int step);
 
 struct window_size point_maxim;
 unsigned char *back_buffer = (unsigned char *)0x00500000;
@@ -53,6 +63,7 @@ unsigned int simple_logo[576] = {
 
 void init_screen() {
     screen = (unsigned char*)(*(unsigned int*)0x7E28);
+    render_buffer = (unsigned char*)j_malloc(1024*768*3);
 int x = 550, x_start = 0, y = 750, y_start = 0, title = 30;
 char *ptr = "Jan Terminal";
 int j = 0;
@@ -86,6 +97,12 @@ id++;
     }
 }
 
+void copy_desktop(){
+for(int i = 0; i < 1024 * 768 * 3; i++){
+render_buffer[i] = back_buffer[i];
+}
+}
+
 void init_term_N(Terminal *term){
 int j = 0;
 int m = 0;
@@ -110,6 +127,7 @@ active_terminal = term;
 is_typing = true;
 terminal(term);
 total_windows++;
+
 }
 
 void init_term_N_focused(Terminal *term){
@@ -120,8 +138,9 @@ active_terminal = term;
 
 load_term_state(active_terminal);
 
-draw_win(active_terminal->window.total_bytes, (((active_terminal->window.x+30)+(active_terminal->window.id*70))*3),
-(((active_terminal->window.y+50)+(active_terminal->window.id*40))*3), active_terminal->window.width*3);
+redraw_windows_z_order(active_terminal);
+present_frame();
+
 load_term_state(active_terminal);
 
 slot_counter++;
@@ -180,63 +199,177 @@ offset = (j * 1024) + y;
 
 }
 
+void draw_win_region_to_buffer(Terminal *term, unsigned char *destination,
+                               int x, int y, int width, int height){
+
+    int start_row = term->window.x + 30 + (term->window.id * 70);
+    int start_col = term->window.y + 50 + (term->window.id * 40);
+
+    int end_row = start_row + term->window.height;
+    int end_col = start_col + term->window.width;
+
+    int region_end_row = x + height;
+    int region_end_col = y + width;
+
+    int top = x > start_row ? x : start_row;
+    int left = y > start_col ? y : start_col;
+
+    int bottom = region_end_row < end_row ? region_end_row : end_row;
+    int right = region_end_col < end_col ? region_end_col : end_col;
+
+    if(top >= bottom || left >= right)
+        return;
+
+    for(int row = top; row < bottom; row++){
+
+        int src = ((row - start_row) * term->window.width
+                   + (left - start_col)) * 3;
+
+        int dest = (row * 3072) + (left * 3);
+
+        for(int col = left; col < right; col++){
+
+            destination[dest++] = term->window.buffer[src++];
+            destination[dest++] = term->window.buffer[src++];
+            destination[dest++] = term->window.buffer[src++];
+        }
+    }
+}
+
+void present_render_region(int x, int y, int width, int height){
+unsigned char *fb = (unsigned char*)screen;
+
+for(int row = 0; row < height; row++){
+int offset = ((x + row) * 3072) + (y * 3);
+
+for(int col = 0; col < width * 3; col++){
+fb[offset + col] = render_buffer[offset + col];
+}
+}
+
+}
+
+void draw_win_to_buffer(Terminal *term, unsigned char *destination){
+int start_row = term->window.x + 30 + (term->window.id * 70);
+int start_col = term->window.y + 50 + (term->window.id * 40);
+
+int width = term->window.width;
+int height = term->window.height;
+
+int row_start = 0;
+int col_start = 0;
+
+int row_end = height;
+int col_end = width;
+
+if(start_row < 0){
+row_start = -start_row;
+}
+
+if(start_row + height > 768){
+row_end = 768 - start_row;
+}
+
+if(start_col < 0){
+col_start = -start_col;
+}
+
+if(start_col + width > 1024){
+col_end = 1024 - start_col;
+}
+
+if(row_start >= row_end || col_start >= col_end){
+return;
+}
+
+for(int row = row_start; row < row_end; row++){
+int src = (row * width + col_start) * 3;
+int dest = ((start_row + row) * 3072) + (start_col + col_start) * 3;
+
+for(int col = col_start; col < col_end; col++){
+destination[dest++] = term->window.buffer[src++];
+destination[dest++] = term->window.buffer[src++];
+destination[dest++] = term->window.buffer[src++];
+}
+}
+}
+
 void redraw_windows(){
-
-    hide_mouse_cursor();
-
-//    flush();
-
-    Terminal *previous_terminal = active_terminal;
+copy_desktop();
 
     for(int i = 0; i < 5; i++){
+     if(term_win[i].check == false)continue;
 
-        if(term_win[i].window.visible == false)
-            continue;
+     draw_win_to_buffer(&term_win[i], render_buffer);
+    }
+}
 
-        if(term_win[i].window.minimized == true)
-            continue;
+void redraw_windows_z_order(Terminal *active_terminal){
+copy_desktop();
 
-        active_terminal = &term_win[i];
+    for(int i = 0; i < 5; i++){
+     if(term_win[i].window.id == active_terminal->window.id || term_win[i].check == false )continue;
 
-        draw_win(
-            active_terminal->window.total_bytes,
-            (((active_terminal->window.x + 30) +
-            (active_terminal->window.id * 70)) * 3),
 
-            (((active_terminal->window.y + 50) +
-            (active_terminal->window.id * 40)) * 3),
+     draw_win_to_buffer(&term_win[i], render_buffer);
+    }
+ draw_win_to_buffer(active_terminal, render_buffer);
+}
 
-            active_terminal->window.width * 3
+void present_frame(){
+unsigned char *fb = (unsigned char*)screen;
+
+for(int i = 0; i < 1024 * 768 * 3; i++){
+fb[i] = render_buffer[i];
+}
+
+}
+
+void present_region(int x, int y, int width, int height){
+unsigned char *fb = (unsigned char*)screen;
+
+for(int i = 0; i < height; i++){
+for(int j = 0; j < width * 3; j++){
+int offset = ((x + i) * 3072) + ((y *3) + j);
+fb[offset] = back_buffer[offset];
+}
+}
+}
+
+void redraw_region(int x, int y, int width, int height){
+
+    // Restore the affected area from the desktop
+    for(int row = 0; row < height; row++){
+
+        int offset = ((x + row) * 3072) + (y * 3);
+
+        for(int col = 0; col < width * 3; col++){
+            render_buffer[offset + col] = back_buffer[offset + col];
+        }
+    }
+
+    // Recompose only the windows overlapping this region
+    for(int i = 0; i < 5; i++){
+
+        if(term_win[i].window.visible == false) continue;
+        if(term_win[i].window.minimized == true) continue;
+
+        draw_win_region_to_buffer(
+            &term_win[i],
+            render_buffer,
+            x, y, width, height
         );
     }
 
-    active_terminal = previous_terminal;
-
-    update_mouse_cursor(mouse_x, mouse_y);
+    // Present only the affected area
+    present_render_region(x, y, width, height);
 }
 
 void mini_draw_win(int x, int y, int y_max){
-unsigned char *fb = (unsigned char*)screen;
-int offset = (x * (3*y_max)) + (y * 3);
-
 x = (x+30)+(active_terminal->window.id*70);
 y = (y+50)+(active_terminal->window.id*40);
-int main_offset = (x*3072) + (y*3);
 
-for(int row = 0; row < 8; row++){
-for(int col = 0; col < 24; col++){
-
-fb[main_offset] = active_terminal->window.buffer[offset+col+ ((y_max*3)*row)];
-main_offset++;
-
-if(col == 23){
-x++;
-main_offset = (x*3072) + (y*3);
-}
-
-
-}
-}
+redraw_region(x, y, 8, 8);
 }
 
 int window_slots(){
@@ -298,19 +431,8 @@ void fill_screen1(int x, int y, unsigned int  color){
 }
 
 
-/*void draw_log1(int x, int y, unsigned int color){
-    int offset = (x * 3072) + (y * 3);
-    back_buffer[offset]     = color & 0xFF;
-    back_buffer[offset + 1] = (color >> 8) & 0xFF;
-    back_buffer[offset + 2] = (color >> 16) & 0xFF;
-}
-*/
 void draw_log(int x, int y, unsigned int  color){
-    unsigned char *fb = (unsigned char*)screen;
-    int offset = (x * 3072) + (y * 3);
-    fb[offset]     = color & 0xFF;
-    fb[offset + 1] = (color >> 8) & 0xFF;
-    fb[offset + 2] = (color >> 16) & 0xFF;
+fill_screen(x, y, color);
 }
 
 void icon(int xth, int yth){
@@ -325,16 +447,16 @@ if(color == 0x000000){
 continue;
 }
 draw_log((xth+y), (yth+x), color);
-//draw_log1((xth+y), (yth+x), color);
+
 }
 }
 }
 
 void grad_color(char *back_buffer, int row, int col){
 for(int i = 0; i < row; i++){
-int blue = 30 - (i*10)/row;
-int green = (i*33)/row;
-int red = (i*49)/row;
+int blue = 204;
+int green = 97;
+int red = 0;
 
 
 for(int j = 0; j < col; j++){
@@ -346,32 +468,52 @@ back_buffer[pix + 2] = red;
 }
 }
 
+int blend_color(int start, int end, int amount){
+return start + ((end - start) * amount)/255;
+}
+
+void draw_wallpaper_wave(char *buffer, int row, int col, int start_x, int base, int amplitude, int blue, int green, int red, int alpha){
+int width = col - start_x;
+for(int x = start_x; x < col; x++){
+int pos = x - start_x;
+int curve = (pos * (width - pos))/width;
+int rise = (curve * amplitude) / (width/4);
+int wave_y = base - rise;
+
+if(wave_y < 0)wave_y = 0;
+if(wave_y >= row)continue;
+
+for(int y = wave_y; y < row; y++){
+int pix = (y*col+x) * 3;
+
+buffer[pix] = (blue*alpha + 204 * (255 - alpha))/255;
+buffer[pix + 1] = (green*alpha + 97 * (255 - alpha))/255;
+buffer[pix + 2] = (red*alpha)/255;
+}
+}
+
+}
+
 void grad_task(char *back_buffer, int row_st, int col_st, int row_end, int col_end){
-unsigned char *fb = (unsigned char*)screen;
 for(int i = row_st; i < row_st+row_end; i++){
 int blue, green, red;
 
 if(i < row_st + 2){
-blue = 90;
-green = 90;
-red = 90;
+blue = 204;
+green = 97;
+red = 0;
 }
 
 else{
-blue = 20 + (i/19);
-green = 20 + (i/19);
-red = 20 + (i/19);
+blue = 25 + ((i-row_st)/4);
+green = 25 + ((i-row_st)/4);
+red = 25 + ((i-row_st)/4);
 }
 
-if(i > ((row_st+row_end)-1)){
-blue = 90;
-green = 90;
-red = 90;
-}
 
 for(int j = col_st; j < col_end; j++){
 int pix = (i*col_end+j)*3;
-back_buffer[pix + 0] = blue;
+back_buffer[pix] = blue;
 back_buffer[pix + 1] = green;
 back_buffer[pix + 2] = red;
 }
@@ -388,19 +530,6 @@ return val;
 }
 
 
-void flush(){
-unsigned char *fb = (unsigned char*)screen;
-unsigned long long *src = (unsigned long long *)back_buffer;
-unsigned long long *dest = (unsigned long long *)fb;
-
-long long total = (1024*768*3)/8;
-
-for(int i = 0; i < total; i++){
-dest[i] = src[i];
-}
-}
-
-
 void draw_rect(int x, int y, int w, int h, int color){
 for(int i = 0; i < h; i++){
 for(int j = 0; j < w; j++){
@@ -412,6 +541,21 @@ ultim_fill(i, j, w, color);
 else{
 ultim_fill(x+i, y+j, 0, color);
 }
+
+}
+}
+
+}
+
+void draw_task_rect(char *buffer, int x, int y, int width, int height, int color){
+for(int i = y; i < y + height; i++){
+for(int j = x; j < x + width; j++){
+
+int pix = (i * SCREEN_W + j)*3;
+
+buffer[pix] = color & 0xFF;
+buffer[pix + 1] = (color >> 8) & 0xFF;
+buffer[pix + 2] = (color >> 16) & 0xFF;
 
 }
 }
@@ -569,12 +713,12 @@ for(int row = 0; row < 8; row++){
 unsigned char conect1 = conect[row];
 for(int bit = 0; bit < 8; bit++){
 if((0x80 >> bit) & conect1){
-fill_screen1(x + row, y + bit, color);
+fill_screen(x + row, y + bit, color);
 
 }
 
 else{
-fill_screen1(x + row, y + bit, color1);
+fill_screen(x + row, y + bit, color1);
 }
 
 
@@ -727,10 +871,8 @@ for(int i = 0; win->title_buffer[i] != 0; i++){
 draw_char((win->title/2)-5, ((win->width/2)-30) + incre, win->title_buffer[i], TEXT_W, GREYY);
 incre += 10;
 }
-
-draw_win((win->total_bytes), (((win->x+30)+(win->id*70))*3), (((win->y+50)+(win->id*40))*3), (win->width*3));
-
-
+redraw_windows();
+present_frame();
 }
 
 void terminal(Terminal *term){
@@ -745,7 +887,8 @@ string(win->title_gap + 35, win->y + 5, "~", TASK_BG, TEXT_B);
 string(win->title_gap + 33, win->y + 5 + 10, "$", TASK_BG, TEXT_B);
 
 icon(737, 110);
-
+redraw_windows();
+present_frame();
 update_mouse_cursor(mouse_x, mouse_y);
 }
 
@@ -765,35 +908,6 @@ letter_track = term->letter_track;
 ad_ten = term->ad_ten;
 }
 
-void terminal_max(int x, int y, int term_y, int term_x, int term_title, char *str ){
-int incre = 0;
-draw_rect(x, y, term_y, term_x, TEXT_B);
-
-draw_rect(x, y, term_y, term_title, GREYY);
-for(int i = 0; str[i] != 0; i++){
-draw_char((term_title - 30) + 13, (term_y / 2 - 45) + incre, str[i], TEXT_W, GREYY);
-incre += 10;
-}
-for(int i = 0; i < 728; i++){
-for(int x = 0; x < 1024; x++){
-for(int y = 0; y < 3; y++){
-}
-}
-}
-}
-
-void terminal_close(){
-/*if(term_win[0].check == true && term_win[1].check == false){
-grad_color(back_buffer, 728, 1024);
-flush();
-}
-else if(term_win[0].check == true && term_win[1].check == true){
-grad_color(back_buffer, 728, 1024);
-flush();
-term_win[1].check = false;
-draw_win(term_win[0].total_bytes, term_win[0].term_x_start, term_win[0].term_y_start, term_win[0].term_y);
-}*/
-}
 
 
 void delay(unsigned int time){
@@ -812,51 +926,57 @@ draw_rect(x-7, y, 2, 27, TEXT_B);
 }
 
 void boot_anime(){
-for(int i = 0; i < 5; i++){
-    term_win[i].check = false;
+
+    for(int y = 0; y < 768; y++){
+        for(int x = 0; x < 1024; x++){
+            int offset = (y*3072) + (x*3);
+            screen[offset] = 204;
+            screen[offset + 1] = 97;
+            screen[offset + 2] = 0;
+        }
     }
-for(int j = 0; j < 1024*768*3; j++){
-back_buffer[j] = 0x00000000;
-}
-//draw_rect(0, 0, SCREEN_W, SCREEN_H, 0x00000000);
-int lx = SCREEN_W / 2 - 120;
-int ly = SCREEN_H / 2 - 40;
 
-char *name = "JaniverOS";
+    for(int i = 0; i < 5; i++){
+        term_win[i].check = false;
+    }
+    for(int j = 0; j < 1024*768*3; j++){
+        back_buffer[j] = 0x00000000;
+    }
 
-for(int i = 0; name[i] != 0; i++){
-for(int j = 0; j < 1; j++){
-draw_cursor(ly, lx, 1);
+    /* fade in the text */
+    for(int bright = 0; bright <= 255; bright += 2){
+        int red = bright;
+        int green = 97 + (158 * bright/255);
+        int blue = 204 + (51 * bright/255);
 
-delay(2200500);
-draw_cursor(ly, lx, 0);
+        unsigned int color = (red << 16) | (green << 8) | blue;
+        draw_janiver_text(320, 382, color);
+        delay(2000000);
+    }
+    draw_janiver_text(320, 382, 0xFFFFFF);
 
-delay(2200500);
-}
+    /* draw the wave */
+    for(int p = 0; p <= 238; p += 4){
+        draw_janiver_wave(291, 388, p, 0, 0xFFFFFF);
+        for(volatile int d = 0; d < 1500000; d++);
+    }
 
-draw_char_l(ly, lx + 8, name[i], 0x00444444, 0x00000000, 0);
+    /* rotating dots */
+    for(int step = 0; step < 30; step++){
+        draw_spinner(512, 440, step);
+        delay(19000000);
+    }
 
-delay(500000);
-draw_char_l(ly, lx + 4, name[i], 0x00888888, 0x00000000, 1);
+//    while(1);      /* delete this line when you want the desktop to load */
 
-delay(1000000);
-draw_char_l(ly, lx, name[i], TEXT_W, 0x00000000, 2);
-delay(10500000);
-lx += 10 * 2;
+    grad_color(back_buffer, 728, 1024);
+    draw_wallpaper_wave(back_buffer, 728, 1024, 5, 728, 120, 225, 120, 20, 100);
+    draw_wallpaper_wave(back_buffer, 728, 1024, 1, 728, 80, 214, 112, 3, 100);
+//    draw_wallpaper_wave(back_buffer, 728, 1024, 720, 65, 150, 55, 3);
+    draw_task_bar();
 
-}
-
-for(int i = 0; i < 6; i++){
-draw_cursor(ly, lx, i%2);
-
-delay(10500000);
-}
-
-draw_cursor(ly, lx, 0);
-flush();
-grad_color(back_buffer, 728, 1024);
-draw_task_bar();
-
+    copy_desktop();
+    present_frame();
 }
 
 /*void logo(){
@@ -877,24 +997,38 @@ hours = ((hours >> 4)*10 + (hours & 0x0F));
 minutes = ((minutes >> 4)*10 + (minutes & 0x0F));
 seconds = ((seconds >> 4)*10 + (seconds & 0x0F));
 
-draw_char_1(745, 945, '0' + hours/10, TEXT_W, GREYY);
-draw_char_1(745, 955, '0' + hours%10, TEXT_W, GREYY);
+draw_char_1(745, 945, '0' + hours/10, TEXT_W, CHARCOAL);
+draw_char_1(745, 955, '0' + hours%10, TEXT_W, CHARCOAL);
 
 
-draw_char_1(745, 965, ':', TEXT_W, GREYY);
+draw_char_1(745, 965, ':', TEXT_W, CHARCOAL);
 
-draw_char_1(745, 975, '0' + minutes/10, TEXT_W, GREYY);
-draw_char_1(745, 985, '0' + minutes%10, TEXT_W, GREYY);
+draw_char_1(745, 975, '0' + minutes/10, TEXT_W, CHARCOAL);
+draw_char_1(745, 985, '0' + minutes%10, TEXT_W, CHARCOAL);
 
 draw_char_1(745, 995, ':', TEXT_W, GREYY);
 
-draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, GREYY);
-draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
+draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, CHARCOAL);
+draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, CHARCOAL);
 
+present_region(745, 945, 79, 16);
 }
 else{
 grad_task(back_buffer, TASK_Y, 0, TASK_H, SCREEN_W);
-flush();
+draw_task_rect(back_buffer, 12, TASK_Y + 5, 46, 30, 0x00444444);
+for(int x = 0; x < 46; x++){
+int curve = (x*(46-x))/46;
+int y = TASK_Y + 34 - (curve/12);
+
+
+int pix = (y*SCREEN_W + 12 + x) *3;
+
+back_buffer[pix] = 204;
+back_buffer[pix + 1] = 97;
+back_buffer[pix + 2] = 0;
+
+}
+
 icon(90, 40);
 unsigned char hours = rtc(0x04);
 unsigned char minutes = rtc(0x02);
@@ -904,20 +1038,19 @@ hours = ((hours >> 4)*10 + (hours & 0x0F));
 minutes = ((minutes >> 4)*10 + (minutes & 0x0F));
 seconds = ((seconds >> 4)*10 + (seconds & 0x0F));
 
-draw_char_1(745, 945, '0' + hours/10, TEXT_W, GREYY);
-draw_char_1(745, 955, '0' + hours%10, TEXT_W, GREYY);
+draw_char_1(745, 945, '0' + hours/10, TEXT_W, CHARCOAL);
+draw_char_1(745, 955, '0' + hours%10, TEXT_W, CHARCOAL);
 
 
-draw_char_1(745, 965, ':', TEXT_W, GREYY);
+draw_char_1(745, 965, ':', TEXT_W, CHARCOAL);
 
-draw_char_1(745, 975, '0' + minutes/10, TEXT_W, GREYY);
-draw_char_1(745, 985, '0' + minutes%10, TEXT_W, GREYY);
+draw_char_1(745, 975, '0' + minutes/10, TEXT_W, CHARCOAL);
+draw_char_1(745, 985, '0' + minutes%10, TEXT_W, CHARCOAL);
 
-draw_char_1(745, 995, ':', TEXT_W, GREYY);
+draw_char_1(745, 995, ':', TEXT_W, CHARCOAL);
 
-draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, GREYY);
-draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, GREYY);
-
+draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, CHARCOAL);
+draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, CHARCOAL);
 task_active = true;
 }
 }
@@ -942,4 +1075,87 @@ track_y1 = term_win[slot_free].window.y+25;
 letter_track = term_win[slot_free].window.y+25;
 
 }
+}
+
+#define BG_COLOR 0x0061CC
+
+void draw_janiver_text(int top, int left, unsigned int color){
+
+    unsigned char *fb = (unsigned char*)screen;
+
+    int bg_b = BG_COLOR & 0xFF;
+    int bg_g = (BG_COLOR >> 8) & 0xFF;
+    int bg_r = (BG_COLOR >> 16) & 0xFF;
+
+    int c_b = color & 0xFF;
+    int c_g = (color >> 8) & 0xFF;
+    int c_r = (color >> 16) & 0xFF;
+
+    for(int y = 0; y < TEXTAA_HEIGHT; y++){
+        for(int x = 0; x < TEXTAA_WIDTH; x++){
+            int a = textaa_alpha[y * TEXTAA_WIDTH + x];
+            if(a == 0) continue;
+
+            int offset = ((top + y) * 3072) + ((left + x) * 3);
+            fb[offset]     = (bg_b * (255 - a) + c_b * a) / 255;
+            fb[offset + 1] = (bg_g * (255 - a) + c_g * a) / 255;
+            fb[offset + 2] = (bg_r * (255 - a) + c_r * a) / 255;
+        }
+    }
+}
+
+
+void draw_janiver_wave(int top, int left, int progress, int phase, unsigned int color){
+
+    unsigned char *fb = (unsigned char*)screen;
+
+    int bg_b = BG_COLOR & 0xFF;
+    int bg_g = (BG_COLOR >> 8) & 0xFF;
+    int bg_r = (BG_COLOR >> 16) & 0xFF;
+
+    int c_b = color & 0xFF;
+    int c_g = (color >> 8) & 0xFF;
+    int c_r = (color >> 16) & 0xFF;
+
+    if(progress > WAVEAA_WIDTH) progress = WAVEAA_WIDTH;
+
+    for(int x = 0; x < progress; x++){
+        for(int y = 0; y < WAVEAA_HEIGHT; y++){
+            int a = waveaa_alpha[y * WAVEAA_WIDTH + x];
+            if(a == 0) continue;
+
+            int offset = ((top + y) * 3072) + ((left + x) * 3);
+            fb[offset]     = (bg_b * (255 - a) + c_b * a) / 255;
+            fb[offset + 1] = (bg_g * (255 - a) + c_g * a) / 255;
+            fb[offset + 2] = (bg_r * (255 - a) + c_r * a) / 255;
+        }
+    }
+}
+
+
+void draw_spinner(int cx, int cy, int step){
+
+    int dx[8] = {0, 10, 14, 10, 0, -10, -14, -10};
+    int dy[8] = {-14, -10, 0, 10, 14, 10, 0, -10};
+
+    for(int i = 0; i < 8; i++){
+
+        int age = ((step % 8) - i + 8) % 8;     /* 0 = newest dot, brightest */
+        int level = 255 - age * 30;
+
+        int red   = level;
+        int green = 97 + (158 * level / 255);
+        int blue  = 204 + (51 * level / 255);
+
+        for(int yy = -3; yy <= 3; yy++){
+            for(int xx = -3; xx <= 3; xx++){
+                if(xx * xx + yy * yy > 10) continue;
+
+                int offset = ((cy + dy[i] + yy) * 3072) + ((cx + dx[i] + xx) * 3);
+                screen[offset]     = blue;
+                screen[offset + 1] = green;
+                screen[offset + 2] = red;
+            }
+        }
+    }
 }

@@ -556,16 +556,6 @@ else if(strcmp(cmd, "ls")){
 ls();
 }
 
-else if(strcmp(cmd, "exit")){
-task_active = false;
-draw_task_bar();
-//terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
-terminal_close();
-icon(90, 120);
-term_win_active = false;
-point_maxim.maxim_flag = 0;
-}
-
 else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 't' && cmd[3] == ' '){
 cat(cmd + 4);
 cur_clear();
@@ -1077,7 +1067,6 @@ int click_y = mouse_y;
 
 if(click_x >= 40 && click_x <= 64 && click_y >= 90 && click_y <= 114){
 open_terminal();
-redraw_windows();
 }
 
 }
@@ -1234,60 +1223,10 @@ active_terminal->window.focused = true;
 }
 }
 
-else if(last_key == 'P'){
-terminal_max(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
-point_maxim.maxim_flag = 0;
-ad_ten = 0;
-track_x = 35;
-track_y = 25;
-letter_track = 25;
-}
-
-
 else if(last_key == 'X'){
-if(point_maxim.maxim_flag == 0){
-//terminal_close(0, 0, SCREEN_W, MAXIMUM, TERM_TITLE, "Jan Terminal");
-terminal_close();
-flush();
-point_maxim.maxim_flag = 1;
-}
-
-else if(point_maxim.maxim_flag == 1){
-if(active_terminal != 0){
-j_free(active_terminal->window.buffer);
-active_terminal->check = false;
-flush();
-for(int i = 0; i < 5; i++){
-if(term_win[i].check == true){
-active_terminal = &term_win[i];
-init_term_N_focused(&term_win[i]);
-}
-}
-active_terminal->window.focused = true;
-
-//task_active = false;
-//draw_task_bar();
-//terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
-//terminal_close();
-//j_free(term_win[0].window.buffer);
-//term_win[0].check = false;
-//icon(90, 120);
-point_maxim.maxim_flag = 0;
-term_win_active = false;
-}
-
-else if(term_win[0].check == true && term_win[1].check == true){
-task_active = false;
-//draw_task_bar();
-//terminal_close(30, 120, TERM_Y, TERM_X, TERM_TITLE, "Jan Terminal");
-terminal_close();
-j_free(term_win[1].window.buffer);
-//icon(90, 120);
 
 }
 
-}
-}
 
 else if(last_key != 0){
 if(point_maxim.maxim_flag == 1 && term_win_active == true){

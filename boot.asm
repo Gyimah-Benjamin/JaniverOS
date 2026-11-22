@@ -35,15 +35,24 @@ boot_start:
     mov ss, ax
     mov sp, 0x7C00
 
+
+
     ; load kernel (LBA 1, 55 sectors) to physical 0x8000
+     mov cx, 4                    ; number of pieces to load
+load_loop:
+    push cx
     mov si, dap
     mov ah, 0x42
     mov dl, 0x80
     int 0x13
     jc disk_error
+    pop cx
+    add dword [dap+8], 64        ; next 64 sectors on the disk
+    add word [dap+6], 0x0800     ; next 32 KB in memory
+    dec cx
+    jnz load_loop
 
     jmp continue_boot
-
 disk_error:
     mov ah, 0x0E
     mov al, 'E'
@@ -80,7 +89,7 @@ continue_boot:
 dap:
     db 0x10
     db 0
-    dw 85
+    dw 64
     dw 0x0000
     dw 0x0800
     dq 1
