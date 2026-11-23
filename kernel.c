@@ -426,14 +426,14 @@ if(point_maxim.maxim_flag == 1){
 track_x += 14;
 ad_ten += 14;
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 string(track_x, track_y1, "--------------------------Available commands---------------------", TASK_BG, TEXT_B);
 track_x += 14;
 ad_ten += 14;
 
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 
 string(track_x, track_y1,"------>>>>>help, about, clear, version, echo, rm, time, calc<<<<<------", TASK_BG, TEXT_B);
@@ -441,7 +441,7 @@ track_x += 14;
 ad_ten += 14;
 
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 
 
@@ -470,7 +470,7 @@ track_x += 14;
 ad_ten += 14;
 
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 
 string(track_x, track_y1, "Jan Operating System .", TASK_BG, TEXT_B);
@@ -494,7 +494,7 @@ ad_ten += 14;
 
 
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 
 string(track_x, track_y1, "Version 1.0x", TASK_BG, TEXT_B);
@@ -512,7 +512,7 @@ else if(cmd[0] == 'e' && cmd[1] == 'c' && cmd[2] == 'h' && cmd[3] == 'o' && cmd[
 track_x += 14;
 ad_ten += 14;
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 string(track_x, track_y1, cmd + 5, TASK_BG, TEXT_B);
 }
@@ -589,7 +589,7 @@ else if(cmd[0] == 'c' && cmd[1] == 'a' && cmd[2] == 'l' && cmd[3] == 'c' && cmd[
 track_x += 14;
 ad_ten += 14;
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 
 int k = 5;
@@ -609,7 +609,7 @@ else{
 track_x += 14;
 ad_ten += 14;
 
-track_y1 = active_terminal->window.y + 15;
+track_y1 = 5;
 
 string(track_x, track_y1, "Command does not exist yet.", RED, TEXT_B);
 }
@@ -1064,6 +1064,48 @@ __asm__ volatile("sti");
 if(mouse_take_left_click()){
 int click_x = mouse_x;
 int click_y = mouse_y;
+for(int i = 0; i < 5; i++){
+if(term_win[i].check == false)continue;
+if(term_win[i].window.visible == false)continue;
+if(term_win[i].window.minimized == true)continue;
+
+int start_row;
+int start_col;
+
+if(term_win[i].window.maximized){
+start_row = 0;
+start_col = 0;
+}
+
+else{
+ start_row = term_win[i].window.x + 30 + (term_win[i].window.id * 70);
+ start_col = term_win[i].window.y + 50 + (term_win[i].window.id * 40);
+}
+
+int close_x1 = start_col + term_win[i].window.width - 18;
+int close_x2 = start_col + term_win[i].window.width - 5;
+
+int close_y1 = start_row + 7;
+int close_y2 = start_row + 22;
+
+if(click_x >= close_x1 && click_x <= close_x2 && click_y >= close_y1 && click_y <= close_y2){
+close_window(&term_win[i]);
+break;
+}
+int max_x1 = start_col + term_win[i].window.width - 38;
+int max_x2 = start_col + term_win[i].window.width - 25;
+
+int max_y1 = start_row + 7;
+int max_y2 = start_row + 22;
+
+if(click_x >= max_x1 && click_x <= max_x2 && click_y >= max_y1 && click_y <= max_y2){
+maximize_window(&term_win[i].window);
+redraw_windows();
+present_frame();
+break;
+}
+
+}
 
 if(click_x >= 40 && click_x <= 64 && click_y >= 90 && click_y <= 114){
 open_terminal();
@@ -1085,12 +1127,12 @@ if(point_maxim.maxim_flag == 1 && last_key == '\b' && term_win_active == true){
 
 if(active_terminal != 0){
 
-if(letter_track > active_terminal->window.y + 25){
-if(track_y <= active_terminal->window.y + 25){
+if(letter_track > 25){
+if(track_y <= 25){
 cur_clear();
 track_x -= 14;
 ad_ten -= 14;
-track_y = (active_terminal->window.width+active_terminal->window.y)-4;
+track_y = active_terminal->window.width - 4;
 cur_clear();
 }
 active_terminal->position--;
@@ -1121,7 +1163,7 @@ if(active_terminal->arrow_count > 0){
 active_terminal->arrow_count--;
 }
 
-while(track_y > active_terminal->window.y+25){
+while(track_y > 25){
 track_y -= 10;
 letter_track -= 10;
 term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
@@ -1153,7 +1195,7 @@ else if(last_key == UP &&  term_win_active == true){
     }
 
     // clear current line
-    while(track_y > active_terminal->window.y+25){
+    while(track_y > 25){
         track_y -= 10;
         letter_track -= 10;
         term_input(track_x, track_y, ' ', TEXT_W, TEXT_B);
@@ -1230,7 +1272,7 @@ else if(last_key == 'X'){
 
 else if(last_key != 0){
 if(point_maxim.maxim_flag == 1 && term_win_active == true){
- if(track_y >= (active_terminal->window.y+active_terminal->window.width)-10){
+ if(track_y >= active_terminal->window.buffer_width - 10){
 cur_clear();
 term_newline_xpromt();
 }

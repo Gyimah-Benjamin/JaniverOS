@@ -7,12 +7,13 @@
 #define TEXT_B 0x00000000
 #define RED 0x00FF0000
 #define GREYY 0x00333333
-#define CHARCOAL 0x00444444
+#define CHARCOAL 0x00191919
 #define SCREEN_W 1024
 #define SCREEN_H 768
 #define MAXIMUM 728
 #define TASK_Y (SCREEN_H - TASK_H)
 #define VIB_BLUE 0xFF1C222E
+#define TITLE_C 0x00202632
 
 #define TERM_X 550
 #define TERM_Y 750
@@ -47,6 +48,7 @@ void flush();
 void draw_mouse_cursor(int x, int y, unsigned int color);
 void update_mouse_cursor(int x, int y);
 void redraw_windows();
+void present_frame();
 void open_terminal();
 void term_newline_xpromt();
 void term_newline_max();
@@ -81,6 +83,13 @@ int y;
 int width;
 int height;
 int id;
+
+int restore_x;
+int restore_y;
+int restore_width;
+int restore_height;
+int buffer_width;
+int buffer_height;
 
 int title;
 int title_gap;
@@ -119,5 +128,7 @@ extern Terminal *active_terminal;
 
 void save_term_state(Terminal *term);
 void load_term_state(Terminal *term);
-
+void close_window(Terminal *term);
+void maximize_window(Window *win);
+void draw_window_decorations(Window *win);
 #endif

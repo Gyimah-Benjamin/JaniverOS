@@ -30,7 +30,6 @@ void draw_janiver_text(int top, int left, unsigned int color);
 void draw_janiver_wave(int top, int left, int progress, int phase, unsigned int color);
 void draw_loading_text(int top, int left, unsigned int color);
 void draw_spinner(int cx, int cy, int step);
-
 struct window_size point_maxim;
 unsigned char *back_buffer = (unsigned char *)0x00500000;
 
@@ -74,6 +73,8 @@ int id = 0;
     term_win[i].window.height = x;
     term_win[i].window.x = x_start;
     term_win[i].window.width = y;
+    term_win[i].window.buffer_width = y;
+    term_win[i].window.buffer_height = x;
     term_win[i].window.y = y_start;
     term_win[i].window.title = title;
     term_win[i].window.title_gap = x_start;
@@ -83,6 +84,12 @@ int id = 0;
     term_win[i].browse = 0;
     term_win[i].arrow_count = 0;
     term_win[i].window.id = id;
+
+    term_win[i].window.restore_x = term_win[i].window.x;
+    term_win[i].window.restore_y = term_win[i].window.y;
+    term_win[i].window.restore_width = term_win[i].window.width;
+    term_win[i].window.restore_height = term_win[i].window.height;
+
     term_win[i].window.visible = false;
     term_win[i].window.focused = false;
     term_win[i].window.minimized = false;
@@ -154,7 +161,7 @@ void fill_screen(int x, int y, unsigned int color){
 }
 
 void ultim_fill(int x, int y, int y_max, int color){
-int offset = (x * (3*y_max)) + (y * 3);
+int offset = (x * (3*active_terminal->window.buffer_width)) + (y * 3);
 
 unsigned char *fb = (unsigned char*)screen;
 int offset_1 = (x * 3072) + (y * 3);
@@ -250,40 +257,47 @@ fb[offset + col] = render_buffer[offset + col];
 }
 
 void draw_win_to_buffer(Terminal *term, unsigned char *destination){
-int start_row = term->window.x + 30 + (term->window.id * 70);
-int start_col = term->window.y + 50 + (term->window.id * 40);
+int start_row;
+int start_col;
 
-int width = term->window.width;
-int height = term->window.height;
+if(term->window.maximized){
+start_row = 0;
+start_col = 0;
+}
+else{
+start_row = term->window.x + 30 + (term->window.id * 70);
+start_col = term->window.y + 50 + (term->window.id * 40);
+}
+
+int width = term->window.buffer_width;
+int height = term->window.buffer_height;
+
+int display_width = term->window.width;
+int display_height = term->window.height;
 
 int row_start = 0;
 int col_start = 0;
 
-int row_end = height;
-int col_end = width;
+int row_end = display_height < height ? display_height : height;
+int col_end = display_width < width ? display_width : width;
 
 if(start_row < 0){
 row_start = -start_row;
 }
-
-if(start_row + height > 768){
+if(start_row + display_height > 768){
 row_end = 768 - start_row;
 }
-
 if(start_col < 0){
 col_start = -start_col;
 }
-
-if(start_col + width > 1024){
+if(start_col + display_width > 1024){
 col_end = 1024 - start_col;
 }
-
 if(row_start >= row_end || col_start >= col_end){
 return;
 }
-
 for(int row = row_start; row < row_end; row++){
-int src = (row * width + col_start) * 3;
+int src = (row * width + col_start)*3;
 int dest = ((start_row + row) * 3072) + (start_col + col_start) * 3;
 
 for(int col = col_start; col < col_end; col++){
@@ -292,6 +306,7 @@ destination[dest++] = term->window.buffer[src++];
 destination[dest++] = term->window.buffer[src++];
 }
 }
+
 }
 
 void redraw_windows(){
@@ -299,6 +314,8 @@ copy_desktop();
 
     for(int i = 0; i < 5; i++){
      if(term_win[i].check == false)continue;
+     if(term_win[i].window.visible == false)continue;
+     if(term_win[i].window.minimized == true)continue;
 
      draw_win_to_buffer(&term_win[i], render_buffer);
     }
@@ -308,7 +325,7 @@ void redraw_windows_z_order(Terminal *active_terminal){
 copy_desktop();
 
     for(int i = 0; i < 5; i++){
-     if(term_win[i].window.id == active_terminal->window.id || term_win[i].check == false )continue;
+     if(term_win[i].window.id == active_terminal->window.id || term_win[i].check == false || term_win[i].window.visible == false || term_win[i].window.minimized == true )continue;
 
 
      draw_win_to_buffer(&term_win[i], render_buffer);
@@ -366,8 +383,10 @@ void redraw_region(int x, int y, int width, int height){
 }
 
 void mini_draw_win(int x, int y, int y_max){
+if(active_terminal->window.maximized == false){
 x = (x+30)+(active_terminal->window.id*70);
 y = (y+50)+(active_terminal->window.id*40);
+}
 
 redraw_region(x, y, 8, 8);
 }
@@ -404,8 +423,10 @@ void mini_draw_rect(int x, int y, int x_term, int y_term, int y_max){
 unsigned char *fb = (unsigned char*)screen;
 int offset = (x * (3*y_max)) + (y * 3);
 
+if(active_terminal->window.maximized == false){
 x = (x+30)+(active_terminal->window.id*70);
 y = (y+50)+(active_terminal->window.id*40);
+}
 
 int main_offset = (x*3072) + (y*3);
 
@@ -534,7 +555,7 @@ void draw_rect(int x, int y, int w, int h, int color){
 for(int i = 0; i < h; i++){
 for(int j = 0; j < w; j++){
 if(active_terminal != 0){
-ultim_fill(i, j, w, color);
+ultim_fill(x+i, y+j, w, color);
 }
 
 
@@ -562,6 +583,50 @@ buffer[pix + 2] = (color >> 16) & 0xFF;
 
 }
 
+
+void window_fill_rect(Window *win, int x, int y, int width, int height, int color){
+for(int i = x; i < x+height; i++){
+for(int j = y; j < y+width; j++){
+
+int offset = (i*win->buffer_width+j)*3;
+
+if(i < 0 || i >= win->buffer_height || j < 0 || j >= win->buffer_width){
+continue;
+}
+
+win->buffer[offset] = color & 0xFF;
+win->buffer[offset+1] = (color >> 8) & 0xFF;
+win->buffer[offset+2] = (color >> 16) & 0xFF;
+}
+}
+
+}
+
+void window_draw_char(Window *win, int x, int y, char al, int color, int color1){
+unsigned char* conect = (unsigned char*)font[al];
+for(int row = 0; row < 8; row++){
+unsigned char conect1 = conect[row];
+for(int bit = 0; bit < 8; bit++){
+
+int offset = ((x+row)*win->buffer_width+(y+bit))*3;
+int color_used;
+
+if((0x80 >> bit) & conect1){
+color_used = color;
+}
+
+else{
+color_used = color1;
+}
+
+if(x+row >= 0 && x+row < win->buffer_height && y+bit >= 0 && y+bit < win->buffer_width){
+win->buffer[offset] = color_used & 0xFF;
+win->buffer[offset+1] = (color_used >> 8) & 0xFF;
+win->buffer[offset+2] = (color_used >> 16) & 0xFF;
+}
+}
+}
+}
 
 void draw_rect_1(int x, int y, int width, int height, int color){
 for(int i = x; i < x+height; i++){
@@ -601,10 +666,10 @@ draw_win((active_terminal->window.total_bytes), (((active_terminal->window.x+30)
 (((active_terminal->window.y+50)+(active_terminal->window.id*40))*3), (active_terminal->window.width*3));
 cur_clear();
 ad_ten = -14;
-track_x = active_terminal->window.x+32-14;
-track_y = active_terminal->window.y+25;
-track_y1 = active_terminal->window.y+25;
-letter_track = active_terminal->window.y+25;
+track_x = 32-14;
+track_y = 25;
+track_y1 = 25;
+letter_track = 25;
 }
 }
 
@@ -650,18 +715,18 @@ void cur_clear_b() {
 void term_newline(){
 ad_ten += 14;
 track_x += 14;
-string(active_terminal->window.x+35 + ad_ten, active_terminal->window.y + 5, "~", TASK_BG, TEXT_B);
-string(active_terminal->window.x+33 + ad_ten, active_terminal->window.y + 15, "$", TASK_BG, TEXT_B);
-track_y = active_terminal->window.y + 25;
-track_y1 = active_terminal->window.y + 25;
-letter_track = active_terminal->window.y + 25;
+string(35 + ad_ten, 5, "~", TASK_BG, TEXT_B);
+string(33 + ad_ten, 15, "$", TASK_BG, TEXT_B);
+track_y = 25;
+track_y1 = 25;
+letter_track = 25;
 
 }
 
 void term_newline_xpromt(){
 ad_ten += 14;
 track_x += 14;
-track_y = active_terminal->window.y+25;
+track_y = 25;
 track_y1 += 10;
 }
 
@@ -682,7 +747,7 @@ unsigned char conect1 = conect[row];
 for(int bit = 0; bit < 8; bit++){
 if((0x80 >> bit) & conect1){
 if(active_terminal != 0){
-ultim_fill(x + row, y + bit, active_terminal->window.width, color);
+ultim_fill(x + row, y + bit, active_terminal->window.buffer_width, color);
 }
 
 
@@ -694,7 +759,7 @@ ultim_fill(x + row, y + bit, 0, color);
 
 else{
 if(active_terminal != 0){
-ultim_fill(x + row, y + bit, active_terminal->window.width, color1);
+ultim_fill(x + row, y + bit, active_terminal->window.buffer_width, color1);
 }
 
 else{
@@ -855,40 +920,53 @@ mini_draw_win(x, y, 1024);
 }
 }
 
-
-void gen_window(Window *win){
+void draw_window_decorations(Window *win){
 int incre = 0;
 
 
-draw_rect(win->x, win->y, win->width, win->height, TEXT_B);
-draw_rect(win->x, win->y, win->width, win->title, GREYY);
+window_fill_rect(win, 0, 0, win->width, win->title, TITLE_C);
 
-draw_rect_1(7, win->width - 58, 14, 16, 0x00E6B422);
-draw_rect_1(7, win->width - 38, 14, 16, 0x0000AA00);
-draw_rect_1(7, win->width - 18, 14, 16, RED);
+
+window_fill_rect(win, 7, win->width - 58, 10, 10, 0x00E6B422);
+window_fill_rect(win, 7, win->width - 38, 10, 10, 0x0000AA00);
+window_fill_rect(win, 7, win->width - 18, 10, 10, RED);
 
 for(int i = 0; win->title_buffer[i] != 0; i++){
-draw_char((win->title/2)-5, ((win->width/2)-30) + incre, win->title_buffer[i], TEXT_W, GREYY);
+window_draw_char(win, (win->title/2)-5, ((win->width/2)-30) + incre, win->title_buffer[i], TEXT_W, TITLE_C);
 incre += 10;
 }
+}
+
+void gen_window(Window *win){
+
+window_fill_rect(win, 0, 0, win->width, win->height, TEXT_B);
+
+draw_window_decorations(win);
+
 redraw_windows();
 present_frame();
 }
 
 void terminal(Terminal *term){
-//create_task(terminal_task);
+unsigned int flags;
+
+__asm__ volatile("pushfl; popl %0; cli" : "=r"(flags) :: "memory");
+
 hide_mouse_cursor();
 
 Window *win = &term->window;
 
 gen_window(win);
 
-string(win->title_gap + 35, win->y + 5, "~", TASK_BG, TEXT_B);
-string(win->title_gap + 33, win->y + 5 + 10, "$", TASK_BG, TEXT_B);
+string(win->title_gap + 35, 5, "~", TASK_BG, TEXT_B);
+string(win->title_gap + 33, 15, "$", TASK_BG, TEXT_B);
 
 icon(737, 110);
 redraw_windows();
 present_frame();
+
+__asm__ volatile("pushl %0; popfl" :: "r"(flags) : "memory", "cc");
+
 update_mouse_cursor(mouse_x, mouse_y);
 }
 
@@ -951,7 +1029,7 @@ void boot_anime(){
 
         unsigned int color = (red << 16) | (green << 8) | blue;
         draw_janiver_text(320, 382, color);
-        delay(2000000);
+        delay(6000000);
     }
     draw_janiver_text(320, 382, 0xFFFFFF);
 
@@ -1006,7 +1084,7 @@ draw_char_1(745, 965, ':', TEXT_W, CHARCOAL);
 draw_char_1(745, 975, '0' + minutes/10, TEXT_W, CHARCOAL);
 draw_char_1(745, 985, '0' + minutes%10, TEXT_W, CHARCOAL);
 
-draw_char_1(745, 995, ':', TEXT_W, GREYY);
+draw_char_1(745, 995, ':', TEXT_W, CHARCOAL);
 
 draw_char_1(745, 1005, '0' + seconds/10, TEXT_W, CHARCOAL);
 draw_char_1(745, 1015, '0' + seconds%10, TEXT_W, CHARCOAL);
@@ -1076,6 +1154,105 @@ letter_track = term_win[slot_free].window.y+25;
 
 }
 }
+
+void close_window(Terminal *term){
+int was_active = (term == active_terminal);
+
+term->window.visible = false;
+term->window.focused = false;
+term->window.minimized = false;
+term->check = false;
+total_windows--;
+
+if(was_active){
+active_terminal = 0;
+
+for(int i = 0; i < 5; i++){
+if(term_win[i].check == true && term_win[i].window.visible == true && term_win[i].window.minimized == false){
+active_terminal = &term_win[i];
+active_terminal->window.focused = true;
+load_term_state(active_terminal);
+break;
+}
+}
+}
+
+unsigned int flags;
+
+__asm__ volatile("pushfl; popl %0; cli" : "=r"(flags) :: "memory");
+
+hide_mouse_cursor();
+redraw_windows();
+present_frame();
+
+__asm__ volatile("pushl %0; popfl" :: "r"(flags) : "memory", "cc");
+
+update_mouse_cursor(mouse_x, mouse_y);
+}
+
+void resize_window_buffer(Window *win, int new_width, int new_height){
+int old_width = win->buffer_width;
+int old_height = win->buffer_height;
+
+unsigned char *new_buffer = (unsigned char*)j_malloc(new_width*new_height*3);
+
+for(int i = 0; i < new_width * new_height * 3; i++){
+new_buffer[i] = 0;
+}
+
+int copy_width = old_width < new_width ? old_width : new_width;
+int copy_height = old_height < new_height ? old_height : new_height;
+
+for(int row = 0; row < copy_height; row++){
+int old_offset = row*old_width*3;
+int new_offset = row*new_width*3;
+
+for(int col = 0; col < copy_width*3; col++){
+new_buffer[new_offset + col] = win->buffer[old_offset+col];
+}
+}
+j_free(win->buffer);
+
+win->buffer = new_buffer;
+win->buffer_width = new_width;
+win->buffer_height = new_height;
+win->total_bytes = new_width*new_height*3;
+}
+
+
+void maximize_window(Window *win){
+if(win->maximized == false){
+resize_window_buffer(win, 1024, 728);
+
+win->restore_x = win->x;
+win->restore_y = win->y;
+win->restore_width = win->width;
+win->restore_height = win->height;
+
+
+win->x = -30 - (win->id*70);
+win->y = -50 - (win->id*40);
+
+win->width = 1024;
+win->height = 728;
+
+win->maximized = true;
+draw_window_decorations(win);
+}
+
+else{
+resize_window_buffer(win, win->restore_width, win->restore_height);
+win->x = win->restore_x;
+win->y = win->restore_y;
+win->width = win->restore_width;
+win->height = win->restore_height;
+
+win->maximized = false;
+draw_window_decorations(win);
+}
+
+}
+
 
 #define BG_COLOR 0x0061CC
 
